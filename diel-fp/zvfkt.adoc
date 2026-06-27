@@ -6,10 +6,8 @@
 *This is a draft specification (v0.1) and has not been ratified.*
 ====
 
-The `Zvfkt` extension attests that the machine has data-independent execution
-latency (DIEL) for a subset of vector floating-point instructions.
-This property is commonly called _"`constant-time`"_ although it should not be
-taken with that literal meaning.
+The Zvfkt extension requires all implemented instructions from the following list to be executed with data-independent execution latency (DIEL) as defined in the
+<<#crypto_scalar_instructions,RISC-V Scalar Cryptography Extensions specification>>.
 
 `Zvfkt` applies to the `Zve32f` extension and is extended when any of
 `Zve64d`, `Zvfh`, `Zvfhmin`, `Zvfbfmin`, `Zvfbfwma`, `Zvfbfa`, or
@@ -51,8 +49,7 @@ mask (when used to control execution of a masked vector instruction).
 When `Zve32f` is supported, the following instructions must be implemented with
 data-independent execution latency for valid values of SEW.
 
-If the instruction variant is not specified, the mandate applies to all
-variants (`.vv`, `.vf`, `.wv`, `.wf`).
+If the instruction variant is not specified, the mandate applies to all existing variants (`.vv`, `.vf`, `.wv`, `.wf`).
 
 [%autowidth]
 [%header,cols="4,4"]
@@ -134,11 +131,16 @@ from the DIEL mandate:
 | `vfdiv`, `vfsqrt.v`
 |===
 
+
+==== `Zve64f` Extension
+
+When `Zve64f` is implemented, the DIEL mandate is extended to widening conversions from floating-point and integers and narrowing conversion from integers to floating-point: `vfwcvt.xu.f.v`, `vfwcvt.x.f.v`, `vfwcvt.rtz.xu.f.v`, `vfwcvt.rtz.x.f.v`, and `vfncvt.f.xu.w`.
+
 ===== `Zve64d` and `Zvfh`(`min`) Extensions
 
 When `Zve64d` or `Zvfh`(`min`) are implemented, the SEW values covered by
 DIEL are extended to all the valid (non-reserved) SEW values for the listed
-instructions.
+instructions. In particular this adds mandates for narrowing and widening floating-point conversions: `vfncvt.f.f.w`, `vfncvt.rod.f.f.w`, `vfwcvt.f.f.v` (which do not exist in Zve32f alone). 
 
 ===== `Zvfbfmin` Extension (Vector BF16 Conversions)
 
