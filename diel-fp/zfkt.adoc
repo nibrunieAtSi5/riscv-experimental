@@ -3,13 +3,13 @@
 
 [NOTE]
 ====
-*This is a draft specification (v0.1) and has not been ratified.*
+*This is a draft specification (v0.1) and has not been ratified. Assume everything can change.*
 ====
 
-The `Zfkt` extension attests that the machine has data-independent execution
-latency (DIEL) for a subset of scalar floating-point instructions.
-This property is commonly called _"`constant-time`"_ although it should not be
-taken with that literal meaning (see <<zfkt-diel-vs-ct>>).
+
+The Zfkt extension requires all implemented instructions from the following list to be executed with data-independent execution latency (DIEL) as defined in the
+<<#crypto_scalar_instructions,RISC-V Scalar Cryptography Extensions specification>>.
+
 
 `Zfkt` applies to the base `F` extension and is extended when any of the `D`,
 `Zfh`, `Zfhmin`, `Zfa`, `Zfbfmin` extensions are implemented.
@@ -218,17 +218,3 @@ with data-independent execution latency:
 For `Zfinx`, `Zdinx`, and `Zhinx`, the instructions listed as part of `Zfkt`
 for the `F` (respectively `D`, `Zfh`/`Zfhmin`) extension must be implemented
 with data-independent execution latency.
-
-[[zfkt-diel-vs-ct]]
-==== DIEL vs. Constant-Time
-
-Data-Independent Execution Latency (DIEL) is a more precise characterization
-than _"`constant-time`"_.
-DIEL requires that the execution latency of an instruction does not vary based
-on the values of the data operands.
-It does _not_ require that the latency is literally the same constant across
-all executions -- only that it is independent of the data being processed.
-
-For example, an out-of-order implementation is free to fuse, crack, or
-reorder instructions, so long as the optimizations are applied
-deterministically and not based on operand data values.
