@@ -1,0 +1,234 @@
+[[ext:zfkt]]
+=== `Zfkt` Extension for Scalar Floating-Point Data-Independent Execution Latency, v0.1
+
+[NOTE]
+====
+*This is a draft specification (v0.1) and has not been ratified.*
+====
+
+The `Zfkt` extension attests that the machine has data-independent execution
+latency (DIEL) for a subset of scalar floating-point instructions.
+This property is commonly called _"`constant-time`"_ although it should not be
+taken with that literal meaning (see <<zfkt-diel-vs-ct>>).
+
+`Zfkt` applies to the base `F` extension and is extended when any of the `D`,
+`Zfh`, `Zfhmin`, `Zfa`, `Zfbfmin` extensions are implemented.
+
+==== Scope and Goal
+
+An _"`ISA contract`"_ is made between a programmer and the RISC-V implementation
+that `Zfkt` instructions do not leak information about processed secret data
+(plaintext, keying information, or other _"`sensitive security parameters`"_)
+through differences in execution latency.
+`Zfkt` does _not_ define a set of instructions available in the core; it
+restricts the behaviour of certain floating-point instructions if those are
+implemented.
+
+The DIEL mandate covers all operand value cases of listed instructions,
+including subnormal inputs and results.
+There are no exclusions for special cases.
+
+Instructions that are most likely to be implemented in an iterative fashion
+by most processors, including application-class implementations (e.g.,
+division, square root), are intentionally excluded from this specification.
+
+[NOTE]
+====
+Embedded and low-power platforms may more often rely on iterative operators
+even for operations such as `fmul.s`; this, alongside other power optimizations
+such as optimizing for zero or specific values (which could be implemented by
+any type of platform), are obviously incompatible with DIEL.
+====
+
+==== Instructions with General-Purpose Register Operands
+
+[NOTE]
+====
+Instructions with a general-purpose register input can take the static
+`x0`=0 as their operand, e.g., `fcvt.s.w fd, x0`.
+Under DIEL, this variant may expose a different latency from
+`fcvt.s.w fd, x1` for example, and that latency can be specific to the
+value `x0`=0. Because the latency is determined by the _encoding_, and not
+linked to the specific input _value_, it does not conflict with the DIEL mandate.
+
+If `x1`=0 has a different measurable latency from any execution of the
+instruction on `x1` with `x1` != 0, then DIEL would be violated and
+would contradict the `Zfkt` mandate.
+====
+
+==== Covered Instructions
+
+===== `F` Extension (Single-Precision)
+
+The following instructions from the `F` extension must be implemented with
+data-independent execution latency when `Zfkt` is supported:
+
+[%autowidth]
+[%header,cols="4,4"]
+|===
+| Instruction Group
+| Instructions
+
+| Arithmetic
+| `fadd.s`, `fsub.s`, `fmul.s`
+
+| Min/Max
+| `fmin.s`, `fmax.s`
+
+| Fused Multiply-Add
+| `fmadd.s`, `fmsub.s`, `fnmsub.s`, `fnmadd.s`
+
+| Conversions (integer to FP)
+| `fcvt.s.w`, `fcvt.s.wu`, `fcvt.s.l`, `fcvt.s.lu`
+
+| Conversions (FP to integer)
+| `fcvt.w.s`, `fcvt.wu.s`, `fcvt.l.s`, `fcvt.lu.s`
+
+| Sign Injection
+| `fsgnj.s`, `fsgnjn.s`, `fsgnjx.s`
+
+| Compare
+| `feq.s`, `flt.s`, `fle.s`
+
+| Classify
+| `fclass.s`
+
+| Move (FP ↔ integer)
+| `fmv.x.w`, `fmv.w.x`
+|===
+
+[NOTE]
+====
+The following single-precision instructions are intentionally _excluded_ from
+the DIEL mandate: `fdiv.s`, `fsqrt.s`.
+====
+
+===== `D` Extension (Double-Precision)
+
+When the `D` extension is implemented, the list of instructions covered by
+`Zfkt` is extended to the double-precision variants of the covered
+instructions, including conversions between single and double precision.
+
+[%autowidth]
+[%header,cols="4,4"]
+|===
+| Instruction Group
+| Instructions
+
+| Arithmetic
+| `fadd.d`, `fsub.d`, `fmul.d`
+
+| Min/Max
+| `fmin.d`, `fmax.d`
+
+| Fused Multiply-Add
+| `fmadd.d`, `fmsub.d`, `fnmsub.d`, `fnmadd.d`
+
+| Conversions (integer to FP)
+| `fcvt.d.w`, `fcvt.d.wu`, `fcvt.d.l`, `fcvt.d.lu`
+
+| Conversions (FP to integer)
+| `fcvt.w.d`, `fcvt.wu.d`, `fcvt.l.d`, `fcvt.lu.d`
+
+| Conversions (FP to FP)
+| `fcvt.s.d`, `fcvt.d.s`
+
+| Sign Injection
+| `fsgnj.d`, `fsgnjn.d`, `fsgnjx.d`
+
+| Compare
+| `feq.d`, `flt.d`, `fle.d`
+
+| Classify
+| `fclass.d`
+
+| Move (FP ↔ integer)
+| `fmv.x.d`, `fmv.d.x`
+|===
+
+[NOTE]
+====
+The following double-precision instructions are intentionally _excluded_ from
+the DIEL mandate: `fdiv.d`, `fsqrt.d`.
+====
+
+===== `Zfh` / `Zfhmin` Extensions (Half-Precision)
+
+When `Zfh` or `Zfhmin` are implemented, the list of instructions covered by
+`Zfkt` is extended to the half-precision variants of the covered instructions.
+
+For `Zfhmin`, this covers the half-precision conversion instructions.
+
+For `Zfh`, this additionally covers the half-precision arithmetic, compare,
+classify, sign-injection, min/max, and fused multiply-add instructions.
+
+[NOTE]
+====
+The following half-precision instructions are intentionally _excluded_ from
+the DIEL mandate: `fdiv.h`, `fsqrt.h`.
+====
+
+===== `Zfa` Extension (Additional Floating-Point Instructions)
+
+When `Zfa` is implemented, the following instructions must be implemented with
+data-independent execution latency:
+
+[%autowidth]
+[%header,cols="4,4"]
+|===
+| Instruction Group
+| Instructions
+
+| Load-Immediate
+| `fli.s`, `fli.d`, `fli.h`
+
+| Min/Max (IEEE 754-2019)
+| `fminm.s`, `fminm.d`, `fminm.h`, `fmaxm.s`, `fmaxm.d`, `fmaxm.h`
+
+| Round to Integer
+| `fround.s`, `fround.d`, `fround.h`, `froundnx.s`, `froundnx.d`, `froundnx.h`
+
+| Modular Conversion
+| `fcvtmod.w.d`
+
+| Move High Word
+| `fmvh.x.d`
+
+| Quiet Compare
+| `fleq.s`, `fleq.d`, `fleq.h`, `fltq.s`, `fltq.d`, `fltq.h`
+|===
+
+===== `Zfbfmin` Extension (BF16 Conversions)
+
+When `Zfbfmin` is implemented, the following instructions must be implemented
+with data-independent execution latency:
+
+[%autowidth]
+[%header,cols="4,4"]
+|===
+| Instruction Group
+| Instructions
+
+| BF16 Conversions
+| `fcvt.bf16.s`, `fcvt.s.bf16`
+|===
+
+===== `Zfinx`, `Zdinx`, `Zhinx` Extensions (FP in Integer Registers)
+
+For `Zfinx`, `Zdinx`, and `Zhinx`, the instructions listed as part of `Zfkt`
+for the `F` (respectively `D`, `Zfh`/`Zfhmin`) extension must be implemented
+with data-independent execution latency.
+
+[[zfkt-diel-vs-ct]]
+==== DIEL vs. Constant-Time
+
+Data-Independent Execution Latency (DIEL) is a more precise characterization
+than _"`constant-time`"_.
+DIEL requires that the execution latency of an instruction does not vary based
+on the values of the data operands.
+It does _not_ require that the latency is literally the same constant across
+all executions -- only that it is independent of the data being processed.
+
+For example, an out-of-order implementation is free to fuse, crack, or
+reorder instructions, so long as the optimizations are applied
+deterministically and not based on operand data values.
