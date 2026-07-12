@@ -19,6 +19,7 @@
 #include <math.h>
 
 #include "rvbna.h"
+#include "rvbna_fixed.h"
 
 /* ── Reference implementation (bulknormdot.h via C++ wrapper) ──────── */
 extern void ref_bulk_norm_dot_bf16(const uint16_t *a_raw,
@@ -296,47 +297,55 @@ static float uint32_to_float(uint32_t bits)
 
 /* ── Main benchmark ────────────────────────────────────────────────── */
 
-static int run_test(const char *name,
-                    const uint16_t a[2], const uint16_t b[2],
-                    int *pass_count, int *fail_count,
-                    int max_failures_to_print, int *printed_failures)
+static void run_test(const char *name,
+                     const uint16_t a[2], const uint16_t b[2],
+                     int *c_pass, int *fixed_pass, int *total,
+                     int max_failures_to_print, int *printed_failures)
 {
     /* Run the pure-C implementation */
     rvbna_result_t c_result = rvbna_bf16_dot(a, b, 2);
+
+    /* Run the new fixed C implementation */
+    rvbna_fixed_result_t fixed_result = rvbna_fixed_bf16_dot(a, b, 2);
 
     /* Run the reference C++ implementation */
     uint32_t ref_value;
     uint8_t  ref_flags;
     ref_bulk_norm_dot_bf16(a, b, 2, &ref_value, &ref_flags);
 
-    bool value_match = (c_result.value == ref_value);
-    bool flags_match = (c_result.flags == ref_flags);
+    bool value_match_c = (c_result.value == ref_value);
+    bool flags_match_c = (c_result.flags == ref_flags);
+    bool c_ok = value_match_c && flags_match_c;
+    
+    bool value_match_fixed = (fixed_result.value == ref_value);
+    bool flags_match_fixed = (fixed_result.flags == ref_flags);
+    bool fixed_ok = value_match_fixed && flags_match_fixed;
 
-    if (value_match && flags_match) {
-        (*pass_count)++;
-        return 1;
-    }
+    (*total)++;
+    if (c_ok) (*c_pass)++;
+    if (fixed_ok) (*fixed_pass)++;
 
-    (*fail_count)++;
-    if (*printed_failures < max_failures_to_print) {
-        char c_flags_buf[64], ref_flags_buf[64];
-        printf("  FAIL: %s\n", name);
-        printf("    inputs: a={0x%04x, 0x%04x} b={0x%04x, 0x%04x}\n",
-               a[0], a[1], b[0], b[1]);
-        printf("    C impl:   value=0x%08x (%.8g)  flags=%s\n",
-               c_result.value, uint32_to_float(c_result.value),
-               flags_str(c_result.flags, c_flags_buf, sizeof(c_flags_buf)));
-        printf("    ref impl: value=0x%08x (%.8g)  flags=%s\n",
-               ref_value, uint32_to_float(ref_value),
-               flags_str(ref_flags, ref_flags_buf, sizeof(ref_flags_buf)));
-        if (!value_match)
-            printf("    ** VALUE MISMATCH **\n");
-        if (!flags_match)
-            printf("    ** FLAGS MISMATCH **\n");
-        printf("\n");
-        (*printed_failures)++;
+    if (!c_ok || !fixed_ok) {
+        if (*printed_failures < max_failures_to_print) {
+            char c_flags_buf[64], fixed_flags_buf[64], ref_flags_buf[64];
+            printf("  MISMATCH: %s\n", name);
+            printf("    inputs: a={0x%04x, 0x%04x} b={0x%04x, 0x%04x}\n",
+                   a[0], a[1], b[0], b[1]);
+            printf("    C impl:       value=0x%08x (%.8g)  flags=%s %s\n",
+                   c_result.value, uint32_to_float(c_result.value),
+                   flags_str(c_result.flags, c_flags_buf, sizeof(c_flags_buf)),
+                   c_ok ? "[OK]" : "[FAIL]");
+            printf("    Fixed impl:   value=0x%08x (%.8g)  flags=%s %s\n",
+                   fixed_result.value, uint32_to_float(fixed_result.value),
+                   flags_str(fixed_result.flags, fixed_flags_buf, sizeof(fixed_flags_buf)),
+                   fixed_ok ? "[OK]" : "[FAIL]");
+            printf("    ref impl:     value=0x%08x (%.8g)  flags=%s\n",
+                   ref_value, uint32_to_float(ref_value),
+                   flags_str(ref_flags, ref_flags_buf, sizeof(ref_flags_buf)));
+            printf("\n");
+            (*printed_failures)++;
+        }
     }
-    return 0;
 }
 
 int main(int argc, char *argv[])
@@ -366,21 +375,21 @@ int main(int argc, char *argv[])
     printf("Configuration: %d directed + %d random tests (seed=%llu)\n\n",
            num_directed_tests, num_random_tests, (unsigned long long)seed);
 
-    int pass_count = 0, fail_count = 0, printed_failures = 0;
+    int c_pass = 0, fixed_pass = 0, total = 0, printed_failures = 0;
 
     /* ── Directed tests ─────────────────────────────────────────────── */
     printf("--- Directed Tests (%d cases) ---\n", num_directed_tests);
     for (int i = 0; i < num_directed_tests; i++) {
         run_test(directed_tests[i].name,
                  directed_tests[i].a, directed_tests[i].b,
-                 &pass_count, &fail_count,
+                 &c_pass, &fixed_pass, &total,
                  max_failures_to_print, &printed_failures);
     }
-    printf("  Directed: %d passed, %d failed\n\n",
-           pass_count, fail_count);
+    printf("  Directed: %d total, C passed %d, Fixed passed %d\n\n",
+           total, c_pass, fixed_pass);
 
     /* ── Random tests ───────────────────────────────────────────────── */
-    int rand_pass = 0, rand_fail = 0;
+    int rand_c_pass = 0, rand_fixed_pass = 0, rand_total = 0;
     rng_seed(seed);
 
     printf("--- Random Tests (%d cases, seed=%llu) ---\n",
@@ -399,24 +408,23 @@ int main(int argc, char *argv[])
         char name[128];
         snprintf(name, sizeof(name), "random[%d]", t);
         run_test(name, a, b,
-                 &rand_pass, &rand_fail,
+                 &rand_c_pass, &rand_fixed_pass, &rand_total,
                  max_failures_to_print, &printed_failures);
     }
-    printf("  Random: %d passed, %d failed\n\n", rand_pass, rand_fail);
+    printf("  Random: %d total, C passed %d, Fixed passed %d\n\n", rand_total, rand_c_pass, rand_fixed_pass);
 
-    pass_count += rand_pass;
-    fail_count += rand_fail;
+    c_pass += rand_c_pass;
+    fixed_pass += rand_fixed_pass;
+    total += rand_total;
 
     /* ── Summary ────────────────────────────────────────────────────── */
     printf("=== Summary ===\n");
-    printf("  Total: %d tests, %d passed, %d failed\n",
-           pass_count + fail_count, pass_count, fail_count);
+    printf("  Total tests: %d\n", total);
+    printf("  C impl matches ref:     %d / %d\n", c_pass, total);
+    printf("  Fixed impl matches ref: %d / %d\n", fixed_pass, total);
 
-    if (fail_count > 0) {
-        if (printed_failures < fail_count)
-            printf("  (%d additional failures not printed, use --max-fail to increase)\n",
-                   fail_count - printed_failures);
-        printf("  RESULT: FAIL\n");
+    if (fixed_pass < total) {
+        printf("  RESULT: FAIL (Fixed impl does not perfectly match ref)\n");
         return 1;
     }
 
