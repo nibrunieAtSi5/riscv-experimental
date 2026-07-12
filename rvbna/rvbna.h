@@ -213,7 +213,8 @@ static inline rvbna_result_t rvbna_dot(const rvbna_config_t *cfg,
 
         /* aligning i-th product */
         int padRight = q + 1 + g - (p_l + p_r);
-        alignedProducts[i] = (prodSigs[i] << padRight) >> alignShift;
+        assert(((unsigned)padRight + (p_l + p_r)) <= (8 * sizeof(alignedProducts[0])));
+        alignedProducts[i] = (alignShift >= (q+1+g)) ? 0 : (prodSigs[i] << padRight) >> alignShift;
 
         /* evaluating values of discarded bits */
         uint64_t discardedMask;
@@ -223,7 +224,7 @@ static inline rvbna_result_t rvbna_dot(const rvbna_config_t *cfg,
         } else if (dm_shift <= 0) {
             discardedMask = ((uint64_t)1 << (p_l + p_r)) - 1;
         } else {
-            discardedMask = (((uint64_t)1 << (p_l + p_r)) - 1) >> dm_shift;
+            discardedMask =  (((uint64_t)1 << (p_l + p_r)) - 1) >> dm_shift;
         }
         uint64_t discardedBits = prodSigs[i] & discardedMask;
         bool jam = (alignShift >= (q + 1 + g))
@@ -265,7 +266,7 @@ static inline rvbna_result_t rvbna_dot(const rvbna_config_t *cfg,
 
     /* jam mask for the bits below the significand */
     uint64_t rawJamMask = ((uint64_t)1 << (g + o + 1)) - 1;
-    int jamMaskShift = (lzc > (g + o + 1)) ? 0 : (g + o + 1 - lzc);
+    int jamMaskShift = (lzc > (g + o + 1)) ? (g + o + 1) : (lzc);
     uint64_t jamMask = rawJamMask >> jamMaskShift;
 
     bool jamSig = ((accAbs & jamMask) != 0);
