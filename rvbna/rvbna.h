@@ -294,20 +294,17 @@ static inline rvbna_result_t rvbna_dot(const rvbna_config_t *cfg,
         return result;
     }
 
-    /* denormalization and final round-to-odd (pseudo-code lines 231-238) */
+    /* denormalization and final round-to-odd
+     * (of bits discarded during denormalization)
+     * — pseudo-code lines 231-238 */
     {
-        /* resExp <= 0 here: we need to denormalize.
-         * The pseudo-code operates on accAbs directly, but at this point
-         * roundedSig contains the q-bit normalized significand.
-         * We denormalize by shifting right by (1 - resExp) and jamming. */
-        int extraShift = 1 - resExp;  /* >= 1 since resExp <= 0 */
-        uint64_t denormSig = roundedSig;
-        uint64_t shiftedDenorm = (extraShift >= 64) ? 0 : (denormSig >> extraShift);
-        uint64_t denormJamMask = (extraShift >= 64) ? (uint64_t)-1 : ((uint64_t)1 << extraShift) - 1;
-        bool denormJam = (denormSig & denormJamMask) != 0;
-        uint32_t finalSig = (uint32_t)shiftedDenorm | (denormJam ? 1 : 0);
+        int denormShift = q - 1 + resExp;  /* resExp <= 0, so denormShift in [0, q-1] */
+        uint64_t denormalizedSig = accAbs >> denormShift;
+        uint64_t discardedMask = ((uint64_t)((1u << (q - 1)) - 1)) >> denormShift;
+        uint64_t discardedBits = accAbs & discardedMask;
+        uint32_t forceLSB = (discardedBits != 0 ? 1 : 0);
 
-        result.value = ((uint32_t)accSign << (q + f - 1)) | finalSig;
+        result.value = ((uint32_t)accSign << (q + f - 1)) | (uint32_t)denormalizedSig | forceLSB;
         return result;
     }
 
