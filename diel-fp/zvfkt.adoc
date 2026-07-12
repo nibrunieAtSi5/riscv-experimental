@@ -1,0 +1,195 @@
+[[ext:zvfkt]]
+=== `Zvfkt` Extension for Vector Floating-Point Data-Independent Execution Latency, v0.1
+
+[NOTE]
+====
+*This is a draft specification (v0.1) and has not been ratified.*
+====
+
+The Zvfkt extension requires all implemented instructions from the following list to be executed with data-independent execution latency (DIEL) as defined in the
+<<#crypto_scalar_instructions,RISC-V Scalar Cryptography Extensions specification>>.
+
+`Zvfkt` applies to the `Zve32f` extension and is extended when any of
+`Zve64d`, `Zvfh`, `Zvfhmin`, `Zvfbfmin`, `Zvfbfwma`, `Zvfbfa`, or
+`Zvfofp8min` are implemented.
+
+==== Scope and Goal
+
+An _"`ISA contract`"_ is made between a programmer and the RISC-V implementation
+that `Zvfkt` instructions do not leak information about processed secret data
+(plaintext, keying information, or other _"`sensitive security parameters`"_)
+through differences in execution latency.
+`Zvfkt` does _not_ define a set of instructions available in the core; it
+restricts the behaviour of certain vector floating-point instructions if those
+are implemented.
+
+The DIEL mandate covers all operand value cases of listed instructions,
+including subnormal inputs and results.
+There are no exclusions for special cases.
+
+Instructions that are most likely to be implemented in an iterative fashion
+by most processors, including application-class implementations (e.g.,
+division, square root), are intentionally excluded from this specification.
+
+==== Operand Rules
+
+The same operand rules as `Zvkt` apply: unless specified otherwise, the DIEL
+mandate applies to all the data source operands.
+
+[NOTE]
+====
+However, DIEL does not apply to other values such as `vl`, `vtype`, and the
+mask (when used to control execution of a masked vector instruction).
+====
+
+==== Covered Instructions
+
+===== `Zve32f` Extension (Single-Precision Vector)
+
+When `Zve32f` is supported, the following instructions must be implemented with
+data-independent execution latency for valid values of SEW.
+
+If the instruction variant is not specified, the mandate applies to all existing variants (`.vv`, `.vf`, `.wv`, `.wf`).
+
+[%autowidth]
+[%header,cols="4,4"]
+|===
+| Instruction Group
+| Instructions
+
+| Arithmetic
+| `vfadd`, `vfsub`, `vfrsub`
+
+| Widening Arithmetic
+| `vfwadd`, `vfwsub`
+
+| Multiply
+| `vfmul`
+
+| Widening Multiply
+| `vfwmul`
+
+| Fused Multiply-Add
+| `vfmacc`, `vfnmacc`, `vfmsac`, `vfnmsac`, `vfmadd`, `vfnmadd`, `vfmsub`, `vfnmsub`
+
+| Widening Fused Multiply-Add
+| `vfwmacc`, `vfwnmacc`, `vfwmsac`, `vfwnmsac`
+
+| Reciprocal Estimate
+| `vfrsqrt7.v`, `vfrec7.v`
+
+| Sign Injection
+| `vfsgnj`, `vfsgnjn`, `vfsgnjx`
+
+| Compare
+| `vmfeq`, `vmfne`, `vmflt`, `vmfle`, `vmfgt`, `vmfge`
+
+| Classify
+| `vfclass.v`
+
+| Merge
+| `vfmerge` (including the mask operand)
+
+| Conversions
+| `vfcvt`, `vfwcvt`, `vfncvt`
+|===
+
+[NOTE]
+====
+To allow DIEL software implementations of division and square root, it is
+critical that the estimate instructions `vfrsqrt7.v` and `vfrec7.v` exhibit
+DIEL (in addition to FMA/ADD/SUB/MUL).
+====
+
+[NOTE]
+====
+The conversion instructions `vfwcvt` and `vfncvt` require `Zve64d` or
+`Zvfh`(`min`) for certain SEW values.
+====
+
+===== Excluded Instructions
+
+Similarly to `Zvkt`, the following instructions are intentionally _excluded_
+from the DIEL mandate:
+
+[%autowidth]
+[%header,cols="4,4"]
+|===
+| Instruction Group
+| Instructions
+
+| Min/Max
+| `vfmin`, `vfmax`
+
+| Reductions
+| `vfredosum.vs`, `vfredusum.vs`, `vfwredosum.vs`, `vfwredusum.vs`
+
+| Min/Max Reductions
+| `vfredmin.vs`, `vfredmax.vs`
+
+| Division/Square Root
+| `vfdiv`, `vfsqrt.v`
+|===
+
+
+==== `Zve64f` Extension
+
+When `Zve64f` is implemented, the DIEL mandate is extended to widening conversions from floating-point and integers and narrowing conversion from integers to floating-point: `vfwcvt.xu.f.v`, `vfwcvt.x.f.v`, `vfwcvt.rtz.xu.f.v`, `vfwcvt.rtz.x.f.v`, and `vfncvt.f.xu.w`.
+
+===== `Zve64d` and `Zvfh`(`min`) Extensions
+
+When `Zve64d` or `Zvfh`(`min`) are implemented, the SEW values covered by
+DIEL are extended to all the valid (non-reserved) SEW values for the listed
+instructions. In particular this adds mandates for narrowing and widening floating-point conversions: `vfncvt.f.f.w`, `vfncvt.rod.f.f.w`, `vfwcvt.f.f.v` (which do not exist in Zve32f alone). 
+
+===== `Zvfbfmin` Extension (Vector BF16 Conversions)
+
+When `Zvfbfmin` is implemented, the following instructions must be implemented
+with data-independent execution latency:
+
+[%autowidth]
+[%header,cols="4,4"]
+|===
+| Instruction Group
+| Instructions
+
+| BF16 Conversions
+| `vfncvtbf16.f.f.w`, `vfwcvtbf16.f.f.v`
+|===
+
+===== `Zvfbfwma` Extension (Vector BF16 Widening Multiply-Add)
+
+When `Zvfbfwma` is implemented, the following instruction must be implemented
+with data-independent execution latency:
+
+[%autowidth]
+[%header,cols="4,4"]
+|===
+| Instruction Group
+| Instructions
+
+| BF16 Widening FMA
+| `vfwmaccbf16`
+|===
+
+===== `Zvfbfa` Extension (Vector BF16 Arithmetic)
+
+When `Zvfbfa` is implemented, all the instructions listed for `Zve32f` (in the
+<<Covered Instructions>> section above) must be implemented with
+data-independent execution latency for valid SEW values when
+`vtype.altfmt`=1.
+
+===== `Zvfofp8min` Extension (Vector OFP8 Conversions)
+
+When `Zvfofp8min` is implemented, the following instructions must be
+implemented with data-independent execution latency:
+
+[%autowidth]
+[%header,cols="4,4"]
+|===
+| Instruction Group
+| Instructions
+
+| OFP8 Conversions
+| `vfwcvtbf16.f.f.v` (SEW=8), `vfncvtbf16.f.f.w` (SEW=8), `vfncvtbf16.sat.f.f.w`, `vfncvt.f.f.q`, `vfncvt.sat.f.f.q`
+|===
