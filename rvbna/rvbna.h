@@ -267,7 +267,7 @@ static inline rvbna_result_t rvbna_dot(const rvbna_config_t *cfg,
     int jamMaskShift = (lzc > (g + o + 1)) ? 0 : (g + o + 1 - lzc);
     uint64_t jamMask = rawJamMask >> jamMaskShift;
 
-    bool jamSig = ((shifted & jamMask) != 0);
+    bool jamSig = ((accAbs & jamMask) != 0);
     uint64_t roundedSig = unroundedSig | (jamSig ? 1 : 0);
 
     if (resExp >= overflowExp) {
