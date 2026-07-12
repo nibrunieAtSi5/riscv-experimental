@@ -10,7 +10,7 @@ The Zvfkt extension requires all implemented instructions from the following lis
 <<#crypto_scalar_instructions,RISC-V Scalar Cryptography Extensions specification>>.
 
 `Zvfkt` applies to the `Zve32f` extension and is extended when any of
-`Zve64d`, `Zvfh`, `Zvfhmin`, `Zvfbfmin`, `Zvfbfwma`, `Zvfbfa`, or
+`Zve64f`, `Zve64d`, `Zvfh`, `Zvfhmin`, `Zvfbfmin`, `Zvfbfwma`, `Zvfbfa`, or
 `Zvfofp8min` are implemented.
 
 ==== Scope and Goal
