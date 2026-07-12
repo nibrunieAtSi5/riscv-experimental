@@ -11,6 +11,7 @@
 
 #include <stdint.h>
 #include <stdbool.h>
+#include <assert.h>
 
 /* ── Exception flags (matching Berkeley SoftFloat-3 definitions) ─────── */
 #define RVBNA_FLAG_INVALID   0x10
@@ -298,10 +299,12 @@ static inline rvbna_result_t rvbna_dot(const rvbna_config_t *cfg,
      * (of bits discarded during denormalization)
      * — pseudo-code lines 231-238 */
     {
-        int denormShift = q - 1 + resExp;  /* resExp <= 0, so denormShift in [0, q-1] */
-        uint64_t denormalizedSig = accAbs >> denormShift;
-        uint64_t discardedMask = ((uint64_t)((1u << (q - 1)) - 1)) >> denormShift;
-        uint64_t discardedBits = accAbs & discardedMask;
+        assert(resExp <= 0);
+        int denormShift = -resExp;  /* resExp <= 0, so denormShift in [0, q-1] */
+        uint64_t denormalizedSig = (accAbs << lzc) >> (g + o + 1 + 1 + denormShift);
+        // uint64_t discardedMask = ((uint64_t)((1u << (q - 1)) - 1)) >> denormShift;
+        uint64_t discardedMask = ((uint64_t)((1u << (g + o + 1 + 1 + denormShift)) - 1));
+        uint64_t discardedBits = (accAbs << lzc)& discardedMask;
         uint32_t forceLSB = (discardedBits != 0 ? 1 : 0);
 
         result.value = ((uint32_t)accSign << (q + f - 1)) | (uint32_t)denormalizedSig | forceLSB;
