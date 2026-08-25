@@ -24,6 +24,7 @@ uint32_t rv_crc32_le(uint32_t crc, const uint8_t *buffer, size_t len) {
             "vmv.v.x v2, %[crc] \n\t"
             "vsetvli %[vl], %[avl], e8, m1, ta, ma \n\t"
             "vle8.v v1, (%[buffer]) \n\t"
+            // vcrc32.vs v2, v1
             ".insn r 0x77, 0x2, 0x51, x2, x20, x1 \n\t"
             "vsetivli x0, 1, e32, m1, ta, ma \n\t"
             "vmv.x.s %[crc], v2 \n\t"
@@ -46,13 +47,12 @@ uint32_t rv_crc32c_le(uint32_t crc, const uint8_t *buffer, size_t len) {
     for (; avl > 0; ) {
         size_t vl = 0;
 
-        // Example wrapper: you'll likely need to load/store vector registers.
-        // Assuming v0 and v1 are used for vd and vs2 here.
         asm volatile (
             "vsetivli x0, 1, e32, m1, ta, ma \n\t"
             "vmv.v.x v0, %[crc] \n\t"
             "vsetvli %[vl], %[avl], e8, m1, ta, ma \n\t"
             "vle8.v v1, (%[buffer]) \n\t"
+            // vcrc32c.vs v0, v1
             ".insn r 0x77, 0x2, 0x51, x0, x21, x1 \n\t"
             "vsetivli x0, 1, e32, m1, ta, ma \n\t"
             "vmv.x.s %[crc], v0 \n\t"
@@ -66,4 +66,29 @@ uint32_t rv_crc32c_le(uint32_t crc, const uint8_t *buffer, size_t len) {
     }
     return crc;
 }
+
+uint32_t rv_crc32_le_opt(uint32_t crc, const uint8_t *buffer, size_t len) {
+
+    asm volatile (
+        "vsetivli x0, 1, e32, m1, ta, ma \n\t"
+        // initializaing accumulator
+        "vmv.v.x v2, %[crc] \n\t"
+    "1:\n\t"
+        // t0 is used to store vl
+        "vsetvli t0, %[avl], e8, m1, ta, ma \n\t"
+        "vle8.v v1, (%[buffer]) \n\t"
+        // vcrc32.vs v2, v1
+        ".insn r 0x77, 0x2, 0x51, x2, x20, x1 \n\t"
+        "sub %[avl], %[avl], t0 \n\t"
+        "add %[buffer], %[buffer], t0 \n\t"
+        "bnez %[avl], 1b \n\t"
+        "vsetivli x0, 1, e32, m1, ta, ma \n\t"
+        "vmv.x.s %[crc], v2 \n\t"
+        : [crc] "+r" (crc)
+        : [avl] "r" (len), [buffer] "r" (buffer)
+        : "v0", "v1", "v2", "memory", "cc", "t0"
+    );
+    return crc;
+}
+
 

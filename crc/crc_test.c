@@ -14,6 +14,7 @@ uint32_t crc32_le_generic(uint32_t crc, unsigned char const *p, size_t len);
 #if defined(__riscv)
 uint32_t rv_crc32_le(uint32_t crc, const uint8_t *data, size_t len);
 uint32_t rv_crc32c_le(uint32_t crc, const uint8_t *data, size_t len);
+uint32_t rv_crc32_le_opt(uint32_t crc, const uint8_t *buffer, size_t len);
 #endif // defined(__riscv) 
 
 
@@ -43,6 +44,8 @@ int main(int argc, char** argv) {
 #if defined(__riscv)
         uint32_t crc_rv_le = rv_crc32_le(0, buffer, buffer_lens[i]);
         printf("CRC32 RV LE:      0x%"PRIx32"\n", crc_rv_le);
+        uint32_t crc_rv_le_opt = rv_crc32_le_opt(0, buffer, buffer_lens[i]);
+        printf("CRC32 RV LE opt:  0x%"PRIx32"\n", crc_rv_le_opt);
 #endif // defined(__riscv) 
         printf("CRC32C LE:    0x%x\n", crc_c);
 #if defined(__riscv)
