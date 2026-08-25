@@ -15,11 +15,12 @@ uint32_t crc32_le_generic(uint32_t crc, unsigned char const *p, size_t len);
 uint32_t rv_crc32_le(uint32_t crc, const uint8_t *data, size_t len);
 uint32_t rv_crc32c_le(uint32_t crc, const uint8_t *data, size_t len);
 uint32_t rv_crc32_le_opt(uint32_t crc, const uint8_t *buffer, size_t len);
+uint32_t rv_crc32_le_vector_clmul(uint32_t crc, unsigned char const *p, size_t len);
 #endif // defined(__riscv) 
 
 
 int main(int argc, char** argv) {
-    size_t buffer_lens[] = {7, 8, 15, 16, 17, 32, 31, 33, 127, 2049};
+    size_t buffer_lens[] = {7, 8, 15, 16, 17, 32, 128, 2047, 2048, 2049};
 
     for (int i = 0; i < sizeof(buffer_lens) / sizeof(size_t); i++) {
         uint8_t* buffer = malloc(buffer_lens[i]);
@@ -51,6 +52,8 @@ int main(int argc, char** argv) {
 #if defined(__riscv)
         uint32_t crc_rv_c = rv_crc32c_le(0, buffer, buffer_lens[i]);
         printf("CRC32C RV LE: 0x%x\n", crc_rv_c);
+        uint32_t crc_rv_le_vector_clmul = rv_crc32_le_vector_clmul(0, buffer, buffer_lens[i]);
+        printf("CRC32 RV LE vector clmul: 0x%x\n", crc_rv_le_vector_clmul);
 #endif // defined(__riscv)
         free(buffer);
     }
