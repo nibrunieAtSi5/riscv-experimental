@@ -5,7 +5,7 @@ LDFLAGS ?=
 BUILD_DIR ?= build
 
 TARGET = $(BUILD_DIR)/crc_test
-SRCS = crc_test.c crc_model.c crc_rv.c crc_rv_fold.S
+SRCS = crc_test.c crc_model.c crc_rv.c crc_rv_fold_asm.S crc_rv_fold.c
 OBJS = $(addprefix $(BUILD_DIR)/, $(patsubst %.S,%.o,$(SRCS:.c=.o)))
 
 .PHONY: all run clean
