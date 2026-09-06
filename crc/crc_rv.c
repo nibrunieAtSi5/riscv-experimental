@@ -316,11 +316,12 @@ uint32_t rv_crc32_le_vector_clmul_fold(uint32_t crc, unsigned char const *p, siz
             uint64_t crc = __riscv_vmv_x_s_u64m1_u64(remainder);
             return (uint32_t) crc;
       } else {
-            // TODO
             // RmRev=0x9ba54c6f00000000 R64Rev=0xb8bc676500000000
             const uint64_t rmRev = 0x9ba54c6f00000000ull;
             const uint64_t r64Rev = 0xb8bc676500000000ull; 
             vuint64m1_t acc = __riscv_vmv_v_x_u64m1(0, 2);
+            // Handling buffer alignment to ensure we can use 64-bit element vector loads (vle64),
+            // without risking slowdown or trap on micro-architectures which do not support them (efficiently).
             if (((size_t) p & 7) != 0) {
                   size_t p_align_len = (size_t) p & 7;
                   vuint8m1_t byte_data = __riscv_vle8_v_u8m1(p, p_align_len);
@@ -345,6 +346,7 @@ uint32_t rv_crc32_le_vector_clmul_fold(uint32_t crc, unsigned char const *p, siz
                   vuint64m1_t lo_rem = __riscv_vclmulh_vx_u64m1(folded_rem_lo, r64Rev, 2);
                   acc = __riscv_vxor_vv_u64m1(lo_rem, folded_rem_hi, 2);
             }
+            // New 16-byte data and accumulator handling
             {
                   vuint64m1_t data = __riscv_vle64_v_u64m1((const unsigned long int *) p, 2);
                   data = __riscv_vxor_vv_u64m1(acc, data, 2);

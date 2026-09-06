@@ -8,6 +8,11 @@
 	.globl	rv_crc32_le_vector_clmul_fold_asm
 	.type	rv_crc32_le_vector_clmul_fold_asm, @function
 rv_crc32_le_vector_clmul_fold_asm:
+	la	t0, .Lconstants
+	ld	t1, 0(t0)
+	ld	t2, 8(t0)
+	ld	t3, 16(t0)
+	ld	t4, 24(t0)
 	li	a4,8
 	bleu	a2,a4,.L51
 	li	a5,32
@@ -16,43 +21,23 @@ rv_crc32_le_vector_clmul_fold_asm:
 	bne	a3,zero,.L52
 	vsetivli	zero,8,e8,m1,ta,ma
 	vle8.v	v2,0(a1)
-	li	a5,-39374848
 	vsetivli	zero,1,e64,m1,ta,ma
-	addi	a5,a5,-639
 	vmv.v.i	v1,0
-	slli	a5,a5,13
-	addi	a5,a5,1527
-	slli	a5,a5,12
 	vxor.vv	v1,v1,v2
-	addi	a5,a5,17
-	slli	a5,a5,12
-	addi	a5,a5,1601
-	vclmul.vx	v1,v1,a5
-	li	a5,498536448
-	slli	a5,a5,4
-	addi	a5,a5,1601
-	vclmulh.vx	v1,v1,a5
+	vclmul.vx	v1,v1,t1
+	vclmulh.vx	v1,v1,t2
 .L50:
 	addi	a5,a1,8
 	vsetivli	zero,8,e8,m1,ta,ma
 	vle8.v	v2,0(a5)
-	li	a5,-39374848
-	addi	a5,a5,-639
-	slli	a5,a5,13
-	addi	a5,a5,1527
 	vsetivli	zero,1,e64,m1,ta,ma
-	slli	a5,a5,12
 	vxor.vv	v1,v1,v2
-	addi	a5,a5,17
-	slli	a5,a5,12
-	addi	a5,a5,1601
-	vclmul.vx	v1,v1,a5
-	li	a4,498536448
-	slli	a4,a4,4
-	addi	a4,a4,1601
+	# mv	a5,t1
+	vclmul.vx	v1,v1,t1
+	# mv	a4,t2
 	addi	a3,a2,-16
 	li	a0,7
-	vclmulh.vx	v1,v1,a4
+	vclmulh.vx	v1,v1,t2
 	bleu	a3,a0,.L42
 	addi	a3,a1,16
 	vsetivli	zero,8,e8,m1,ta,ma
@@ -60,16 +45,16 @@ rv_crc32_le_vector_clmul_fold_asm:
 	vsetivli	zero,1,e64,m1,ta,ma
 	li	a3,32
 	vxor.vv	v1,v1,v2
-	vclmul.vx	v1,v1,a5
-	vclmulh.vx	v1,v1,a4
+	vclmul.vx	v1,v1,t1
+	vclmulh.vx	v1,v1,t2
 	bne	a2,a3,.L42
 	vsetivli	zero,8,e8,m1,ta,ma
 	addi	a1,a1,24
 	vle8.v	v2,0(a1)
 	vsetivli	zero,1,e64,m1,ta,ma
 	vxor.vv	v1,v1,v2
-	vclmul.vx	v1,v1,a5
-	vclmulh.vx	v1,v1,a4
+	vclmul.vx	v1,v1,t1
+	vclmulh.vx	v1,v1,t2
 .L42:
 	vmv.x.s	a0,v1
 	sext.w	a0,a0
@@ -82,23 +67,19 @@ rv_crc32_le_vector_clmul_fold_asm:
 .L38:
 	srli	a5,a2,4
 	addi	a0,a5,-1
-	li	a4,-1683664896
-	li	a3,-1195614208
 	slli	a0,a0,4
-	addi	a4,a4,-913
-	addi	a3,a3,1893
 	addi	a6,a5,-2
 	add	a0,a1,a0
-	slli	a4,a4,32
-	slli	a3,a3,32
+	// mv	a4,t3
+	// mv	a3,t4
 	mv	a5,a1
 .L40:
 	vle64.v	v2,0(a5)
 	addi	a5,a5,16
 	vxor.vv	v1,v1,v2
-	vclmul.vx	v2,v1,a4
-	vclmulh.vx	v1,v1,a4
-	vclmulh.vx	v2,v2,a3
+	vclmul.vx	v2,v1,t3
+	vclmulh.vx	v1,v1,t3
+	vclmulh.vx	v2,v2,t4
 	vxor.vv	v1,v2,v1
 	bne	a5,a0,.L40
 	neg	a5,a6
@@ -107,28 +88,19 @@ rv_crc32_le_vector_clmul_fold_asm:
 	add	a4,a2,a5
 	addi	a5,a0,16
 	vle64.v	v2,0(a5)
-	li	a5,-39374848
-	addi	a5,a5,-639
-	slli	a5,a5,13
-	addi	a5,a5,1527
-	slli	a5,a5,12
 	vxor.vv	v1,v1,v2
-	addi	a5,a5,17
-	slli	a5,a5,12
 	vsetivli	zero,1,e64,m1,ta,ma
-	addi	a5,a5,1601
-	vclmul.vx	v2,v1,a5
-	li	a3,498536448
-	slli	a3,a3,4
-	addi	a3,a3,1601
-	vclmulh.vx	v2,v2,a3
+	// mv	a5,t1
+	vclmul.vx	v2,v1,t1 
+	// mv	a3,t2
+	vclmulh.vx	v2,v2,t2
 	vslidedown.vi	v1,v1,1
 	addi	a2,a4,-32
 	li	a6,7
 	vxor.vv	v1,v2,v1
 	addi	a1,a0,32
-	vclmul.vx	v1,v1,a5
-	vclmulh.vx	v1,v1,a3
+	vclmul.vx	v1,v1,t1
+	vclmulh.vx	v1,v1,t2
 	bgtu	a2,a6,.L54
 	beq	a2,zero,.L42
 .L43:
@@ -136,25 +108,16 @@ rv_crc32_le_vector_clmul_fold_asm:
 	vle8.v	v2,0(a1)
 	li	a4,8
 	sub	a4,a4,a2
-	li	a5,-39374848
 	vsetivli	zero,1,e64,m1,ta,ma
 	slli	a4,a4,3
-	addi	a5,a5,-639
 	vsll.vx	v3,v1,a4
 	vsll.vx	v2,v2,a4
-	slli	a5,a5,13
-	addi	a5,a5,1527
-	slli	a5,a5,12
 	vxor.vv	v2,v2,v3
-	addi	a5,a5,17
-	slli	a5,a5,12
-	addi	a5,a5,1601
-	vclmul.vx	v2,v2,a5
-	li	a5,498536448
-	slli	a5,a5,4
-	addi	a5,a5,1601
+	# mv	a5,t1
+	vclmul.vx	v2,v2,t1 
+	# mv	a5,t2
 	li	a3,64
-	vclmulh.vx	v2,v2,a5
+	vclmulh.vx	v2,v2,t2
 	sub	a5,a3,a4
 	vsrl.vx	v1,v1,a5
 	vxor.vv	v1,v1,v2
@@ -164,79 +127,52 @@ rv_crc32_le_vector_clmul_fold_asm:
 .L51:
 	vsetvli	zero,a2,e8,m1,ta,ma
 	vle8.v	v1,0(a1)
-	li	a5,-39374848
-	addi	a5,a5,-639
-	slli	a5,a5,13
 	sub	a4,a4,a2
-	addi	a5,a5,1527
 	vsetivli	zero,1,e64,m1,ta,ma
 	slli	a4,a4,3
-	slli	a5,a5,12
 	vsll.vx	v1,v1,a4
-	addi	a5,a5,17
-	slli	a5,a5,12
-	addi	a5,a5,1601
-	vclmul.vx	v1,v1,a5
-	li	a5,498536448
-	slli	a5,a5,4
-	addi	a5,a5,1601
-	vclmulh.vx	v1,v1,a5
+	// mv	a5,t1
+	vclmul.vx	v1,v1,t1
+	// mv	a5,t2
+	vclmulh.vx	v1,v1,t2
 	vmv.x.s	a0,v1
 	sext.w	a0,a0
 	ret
 .L52:
 	vsetvli	zero,a2,e8,m1,ta,ma
 	vle8.v	v1,0(a1)
-	li	a5,-39374848
-	addi	a5,a5,-639
-	slli	a5,a5,13
 	sub	a4,a4,a2
-	addi	a5,a5,1527
 	vsetivli	zero,1,e64,m1,ta,ma
 	slli	a4,a4,3
-	slli	a5,a5,12
 	vsll.vx	v1,v1,a4
-	addi	a5,a5,17
-	slli	a5,a5,12
-	addi	a5,a5,1601
-	vclmul.vx	v1,v1,a5
+	// mv	a5,t1
+	vclmul.vx	v1,v1,t1
 	add	a1,a1,a3
 	vsetivli	zero,8,e8,m1,ta,ma
-	li	a4,498536448
 	vle8.v	v2,0(a1)
-	slli	a4,a4,4
 	vsetivli	zero,1,e64,m1,ta,ma
-	addi	a4,a4,1601
-	vclmulh.vx	v1,v1,a4
+	//mv	a4,t2
+	vclmulh.vx	v1,v1,t2
 	li	a0,7
 	vxor.vv	v1,v1,v2
-	vclmul.vx	v1,v1,a5
+	vclmul.vx	v1,v1,t1
 	addi	a5,a2,-8
-	vclmulh.vx	v1,v1,a4
+	vclmulh.vx	v1,v1,t2
 	bleu	a5,a0,.L42
 	j	.L50
 .L53:
 	vsetvli	zero,a3,e8,m1,ta,ma
 	vle8.v	v1,0(a1)
-	li	a5,-39374848
-	addi	a5,a5,-639
-	slli	a5,a5,13
 	sub	a4,a4,a3
-	addi	a5,a5,1527
 	vsetivli	zero,1,e64,m1,ta,ma
 	slli	a4,a4,3
-	slli	a5,a5,12
 	vsll.vx	v1,v1,a4
-	addi	a5,a5,17
-	slli	a5,a5,12
-	addi	a5,a5,1601
-	vclmul.vx	v1,v1,a5
-	li	a4,498536448
-	slli	a4,a4,4
-	addi	a4,a4,1601
+	// mv	a5,t1
+	vclmul.vx	v1,v1,t1
+	// mv	a4,t2
 	sub	a2,a2,a3
 	li	a0,31
-	vclmulh.vx	v1,v1,a4
+	vclmulh.vx	v1,v1,t2
 	add	a1,a1,a3
 	bleu	a2,a0,.L39
 	vsetivli	zero,2,e64,m1,ta,ma
@@ -248,8 +184,8 @@ rv_crc32_le_vector_clmul_fold_asm:
 	addi	a2,a4,-40
 	addi	a1,a0,40
 	vxor.vv	v1,v1,v2
-	vclmul.vx	v1,v1,a5
-	vclmulh.vx	v1,v1,a3
+	vclmul.vx	v1,v1,t1
+	vclmulh.vx	v1,v1,t2
 	beq	a2,zero,.L42
 	j	.L43
 .L39:
@@ -274,5 +210,13 @@ rv_crc32_le_vector_clmul_fold_asm:
 	vclmulh.vx	v1,v1,a4
 	j	.L43
 	.size	rv_crc32_le_vector_clmul_fold_asm, .-rv_crc32_le_vector_clmul_fold_asm
+	.section .rodata
+	.align 3
+.Lconstants:
+	.quad 0xb4e5b025f7011641
+	.quad 0x00000001db710641
+	.quad 0x9ba54c6f00000000
+	.quad 0xb8bc676500000000
+	.text
 	.ident	"GCC: () 16.1.0"
 	.section	.note.GNU-stack,"",@progbits
