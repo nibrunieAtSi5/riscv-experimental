@@ -5,8 +5,8 @@ LDFLAGS ?=
 BUILD_DIR ?= build
 
 TARGET = $(BUILD_DIR)/crc_test
-SRCS = crc_test.c crc_model.c crc_rv.c
-OBJS = $(addprefix $(BUILD_DIR)/, $(SRCS:.c=.o))
+SRCS = crc_test.c crc_model.c crc_rv.c crc_rv_fold.S
+OBJS = $(addprefix $(BUILD_DIR)/, $(patsubst %.S,%.o,$(SRCS:.c=.o)))
 
 .PHONY: all run clean
 
@@ -16,6 +16,9 @@ $(TARGET): $(OBJS) | $(BUILD_DIR)
 	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $^
 
 $(BUILD_DIR)/%.o: %.c | $(BUILD_DIR)
+	$(CC) $(CFLAGS) -c $< -o $@
+
+$(BUILD_DIR)/%.o: %.S | $(BUILD_DIR)
 	$(CC) $(CFLAGS) -c $< -o $@
 
 $(BUILD_DIR):
