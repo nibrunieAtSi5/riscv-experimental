@@ -18,6 +18,31 @@ uint32_t rv_crc32_le_opt(uint32_t crc, const uint8_t *buffer, size_t len);
 uint32_t rv_crc32_le_vector_clmul(uint32_t crc, unsigned char const *p, size_t len);
 #endif // defined(__riscv) 
 
+static inline uint64_t get_cycles() {
+#if defined(__riscv)
+    uint64_t cycles;
+    asm volatile ("rdcycle %0" : "=r" (cycles));
+    return cycles;
+#elif defined(__x86_64__)
+    uint32_t lo, hi;
+    asm volatile ("rdtsc" : "=a" (lo), "=d" (hi));
+    return ((uint64_t)hi << 32) | lo;
+#elif defined(__aarch64__)
+    uint64_t val;
+    asm volatile("mrs %0, cntvct_el0" : "=r" (val));
+    return val;
+#else
+    return 0;
+#endif
+}
+
+#define MEASURE(NAME, FUNC, ...) \
+    do { \
+        uint64_t start = get_cycles(); \
+        uint32_t res = FUNC(__VA_ARGS__); \
+        uint64_t end = get_cycles(); \
+        printf("%-30s: 0x%08x (%" PRIu64 " cycles)\n", NAME, res, end - start); \
+    } while (0)
 
 int main(int argc, char** argv) {
     size_t buffer_lens[] = {7, 8, 15, 16, 17, 32, 128, 2047, 2048, 2049};
@@ -30,31 +55,23 @@ int main(int argc, char** argv) {
         }
         // randomizing buffer content
         for (int j = 0; j < buffer_lens[i]; j++) {
-            buffer[j] = (uint8_t) ((j * 3) % 256); //rand();
+            buffer[j] = (j == 0) ? 0x1 : 0; //  (uint8_t) ((j * 3) % 256) : ((uint8_t) ((j * 3) % 256)); //rand();
         }
-        // evaluating CRC32
-        uint32_t crc_le = crc32_le_base(0, buffer, buffer_lens[i]);
-        uint32_t crc_be = crc32_be_base(0, buffer, buffer_lens[i]);
-        uint32_t crc_c = crc32c_base(0, buffer, buffer_lens[i]);
-
-        uint32_t crc_le_generic = crc32_le_generic(0, buffer, buffer_lens[i]);
+        
+        printf("==========================================\n");
         printf("Buffer length: %zu\n", buffer_lens[i]);
-        printf("CRC32 BE: 0x%x\n", crc_be);
-        printf("CRC32 LE: 0x%x\n", crc_le);
-        printf("CRC32 LE generic: 0x%x\n", crc_le_generic);
+        
+        MEASURE("CRC32 BE", crc32_be_base, 0, buffer, buffer_lens[i]);
+        MEASURE("CRC32 LE", crc32_le_base, 0, buffer, buffer_lens[i]);
+        MEASURE("CRC32 LE generic", crc32_le_generic, 0, buffer, buffer_lens[i]);
 #if defined(__riscv)
-        uint32_t crc_rv_le = rv_crc32_le(0, buffer, buffer_lens[i]);
-        printf("CRC32 RV LE:      0x%"PRIx32"\n", crc_rv_le);
-        uint32_t crc_rv_le_opt = rv_crc32_le_opt(0, buffer, buffer_lens[i]);
-        printf("CRC32 RV LE opt:  0x%"PRIx32"\n", crc_rv_le_opt);
+        MEASURE("CRC32 RV LE", rv_crc32_le, 0, buffer, buffer_lens[i]);
+        MEASURE("CRC32 RV LE opt", rv_crc32_le_opt, 0, buffer, buffer_lens[i]);
+        MEASURE("CRC32 RV LE vector clmul", rv_crc32_le_vector_clmul, 0, buffer, buffer_lens[i]);
+        MEASURE("CRC32C RV LE", rv_crc32c_le, 0, buffer, buffer_lens[i]);
 #endif // defined(__riscv) 
-        printf("CRC32C LE:    0x%x\n", crc_c);
-#if defined(__riscv)
-        uint32_t crc_rv_c = rv_crc32c_le(0, buffer, buffer_lens[i]);
-        printf("CRC32C RV LE: 0x%x\n", crc_rv_c);
-        uint32_t crc_rv_le_vector_clmul = rv_crc32_le_vector_clmul(0, buffer, buffer_lens[i]);
-        printf("CRC32 RV LE vector clmul: 0x%x\n", crc_rv_le_vector_clmul);
-#endif // defined(__riscv)
+
+        MEASURE("CRC32C LE", crc32c_base, 0, buffer, buffer_lens[i]);
         free(buffer);
     }
 
