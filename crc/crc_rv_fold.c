@@ -66,29 +66,6 @@ uint32_t rv_crc32_le_vector_clmul_fold(uint32_t crc, unsigned char const *p, siz
 
     const uint64_t r64Rev  = 0xb8bc676500000000ull; // for m=63
     const uint64_t r128Rev = 0x9ba54c6f00000000ull; // for m=127
-#if LMUL == 1
-    const size_t numBytesPerMainIteration = 16;
-    // RmRev=0x9ba54c6f00000000 R64Rev=0xb8bc676500000000
-    const uint64_t rmRev = r128Rev; // for m=127
-    const uint64_t lastFoldingCsts[2] = {r64Rev};
-#elif LMUL == 2
-    const uint64_t r192Rev=0x65673b4600000000ull; // for m=191
-    const size_t numBytesPerMainIteration = 32;
-    const uint64_t r256Rev = 0x1b5fd1d00000000ull; // for m=255
-    const uint64_t rmRev = r256Rev; // for m=255
-    const uint64_t lastFoldingCsts[4] = {r192Rev, r128Rev, r64Rev, 0};
-#elif LMUL == 4
-    const size_t numBytesPerMainIteration = 64;
-    const uint64_t r192Rev=0x65673b4600000000ull; // for m=191
-    const uint64_t r256Rev = 0x1b5fd1d00000000ull; // for m=255
-    const uint64_t r320Rev = 0x9570d49500000000ull; // [reverse on 64-bit] for X^319
-    const uint64_t r384Rev = 0x2a28386200000000ull; // [reverse on 64-bit] for X^383
-    const uint64_t r448Rev = 0x69ccfc0d00000000ull; // [reverse on 64-bit] for X^447
-    const uint64_t r512Rev = 0xcad38e8f00000000ull; // [reverse on 64-bit] for X^511
-    const uint64_t rmRev = r512Rev;
-    const uint64_t lastFoldingCsts[8] = {r448Rev, r384Rev, r320Rev, r256Rev, r192Rev, r128Rev, r64Rev, 0};
-#elif LMUL == 8 
-    const size_t numBytesPerMainIteration = 128;
     const uint64_t r192Rev = 0x65673b4600000000ull; // [reverse on 64-bit] for X^191
     const uint64_t r256Rev = 0x1b5fd1d00000000ull; // [reverse on 64-bit] for X^255
     const uint64_t r320Rev = 0x9570d49500000000ull; // [reverse on 64-bit] for X^319
@@ -103,19 +80,24 @@ uint32_t rv_crc32_le_vector_clmul_fold(uint32_t crc, unsigned char const *p, siz
     const uint64_t r896Rev = 0xc64ac0b800000000ull; // [reverse on 64-bit] for X^895
     const uint64_t r960Rev = 0x19866e800000000ull; // [reverse on 64-bit] for X^959
     const uint64_t r1024Rev = 0x7406fa9500000000ull; // [reverse on 64-bit] for X^1023
-    const uint64_t rmRev = r1024Rev;
-    const uint64_t lastFoldingCsts[16] = {
+
+    const size_t numBytesPerMainIteration = 16 * LMUL;
+    const uint64_t allLastFoldingCsts[17] = {
+        r1024Rev,
         r960Rev, r896Rev, r832Rev, r768Rev, r704Rev, r640Rev, r576Rev, r512Rev,
         r448Rev, r384Rev, r320Rev, r256Rev, r192Rev, r128Rev, r64Rev, 0
     };
-#else
-#error "Unsupported LMUL"
-#endif
-
     const size_t numE64PerMainIteration = numBytesPerMainIteration / 8;
 
+    const uint64_t *lastFoldingCsts = allLastFoldingCsts + 1 + (16 - numE64PerMainIteration);
+    const uint64_t rmRev = allLastFoldingCsts[16 - 2 * LMUL]; // for m=127
+
+
+    // large accumulator
     VUINT64_T acc = VMV_V_X(0, numE64PerMainIteration);
+    // 1-element accumulator (final stages)
     vuint64m1_t acc1 = __riscv_vmv_v_x_u64m1(0, 1);
+
     // Handling buffer alignment to ensure we can use 64-bit element vector loads (vle64),
     // without risking slowdown or trap on micro-architectures which do not support them (efficiently).
     if (len >= numBytesPerMainIteration && ((size_t) p & 7) != 0) {
@@ -156,13 +138,6 @@ uint32_t rv_crc32_le_vector_clmul_fold(uint32_t crc, unsigned char const *p, siz
         // printf("%zu-byte folding (len=%zu)\n", numBytesPerMainIteration, len);
           VUINT64_T data = VLE64_V((const unsigned long int *) p, numE64PerMainIteration);
           data = VXOR_VV(acc, data, numE64PerMainIteration);
-#if 0
-          VUINT64_T acc_hi = data;
-          VUINT64_T acc_lo = VSLIDEDOWN_VX(data, 1, 1);
-          VUINT64_T remainder = crc32_le_clmul64_v2(acc_hi);
-          remainder = VXOR_VV(remainder, acc_lo, 1);
-          acc = crc32_le_clmul64_v2(remainder);
-#else
           VUINT64_T vlastFoldingCsts = VLE64_V(lastFoldingCsts, numE64PerMainIteration);
 
           VUINT64_T folded_rem_hi = VCLMULH_VV(data, vlastFoldingCsts, numE64PerMainIteration);
@@ -170,10 +145,11 @@ uint32_t rv_crc32_le_vector_clmul_fold(uint32_t crc, unsigned char const *p, siz
 
           VUINT64_T lo_rem = VCLMULH_VX(folded_rem_lo, r64Rev, numE64PerMainIteration);
           acc = VXOR_VV_TU(data, lo_rem, folded_rem_hi, numE64PerMainIteration - 1);
+          // reduction require a LMUL=1 result whatever the actual implementation LMUL
           acc1 = __riscv_vmv_v_x_u64m1(0, 1);
           acc1 = VREDXOR_VS(acc, acc1, numE64PerMainIteration);
           acc1 = crc32_le_clmul64_v2_m1(acc1);
-#endif
+
           len -= numBytesPerMainIteration;
           p += numBytesPerMainIteration;
     } else {
