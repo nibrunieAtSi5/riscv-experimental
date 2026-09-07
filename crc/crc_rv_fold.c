@@ -44,6 +44,7 @@ uint32_t rv_crc32_le_vector_clmul_fold(uint32_t crc, unsigned char const *p, siz
     // pre-computing loop boundaries to allow single update (pointer) in loop body
     const size_t numBytesPerMainIteration = 16;
     int num_main_iterations = (len / numBytesPerMainIteration) - 1;
+    num_main_iterations = num_main_iterations < 0 ? 0 : num_main_iterations;
     const uint8_t * p_limit = p + (num_main_iterations * numBytesPerMainIteration); 
 
     for (; p < p_limit; p += numBytesPerMainIteration) {
