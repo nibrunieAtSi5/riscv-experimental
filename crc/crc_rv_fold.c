@@ -35,25 +35,45 @@
 #define VXOR_VV_TU PASTE_3(__riscv_vxor_vv_u64m, LMUL, _tu)
 #define VGET_V_U64M1 PASTE_3(__riscv_vget_v_u64m, LMUL, _u64m1)
 
+const uint64_t REV_CRC32_BE_INV_EXT = 0xb4e5b025f7011641ull;
+const uint64_t rem_cst = 0x1db710641ull; 
+
+const uint64_t r64Rev  = 0xb8bc676500000000ull; // for m=63
+const uint64_t r128Rev = 0x9ba54c6f00000000ull; // for m=127
+const uint64_t r192Rev = 0x65673b4600000000ull; // [reverse on 64-bit] for X^191
+const uint64_t r256Rev = 0x1b5fd1d00000000ull; // [reverse on 64-bit] for X^255
+const uint64_t r320Rev = 0x9570d49500000000ull; // [reverse on 64-bit] for X^319
+const uint64_t r384Rev = 0x2a28386200000000ull; // [reverse on 64-bit] for X^383
+const uint64_t r448Rev = 0x69ccfc0d00000000ull; // [reverse on 64-bit] for X^447
+const uint64_t r512Rev = 0xcad38e8f00000000ull; // [reverse on 64-bit] for X^511
+const uint64_t r576Rev = 0x653d982200000000ull; // [reverse on 64-bit] for X^575
+const uint64_t r640Rev = 0x8e42b13e00000000ull; // [reverse on 64-bit] for X^639
+const uint64_t r704Rev = 0x5a03a0cf00000000ull; // [reverse on 64-bit] for X^703
+const uint64_t r768Rev = 0x101a233100000000ull; // [reverse on 64-bit] for X^767
+const uint64_t r832Rev = 0x759fc69d00000000ull; // [reverse on 64-bit] for X^831
+const uint64_t r896Rev = 0xc64ac0b800000000ull; // [reverse on 64-bit] for X^895
+const uint64_t r960Rev = 0x19866e800000000ull; // [reverse on 64-bit] for X^959
+const uint64_t r1024Rev = 0x7406fa9500000000ull; // [reverse on 64-bit] for X^1023
+const uint64_t allLastFoldingCsts[17] = {
+    r1024Rev,
+    r960Rev, r896Rev, r832Rev, r768Rev, r704Rev, r640Rev, r576Rev, r512Rev,
+    r448Rev, r384Rev, r320Rev, r256Rev, r192Rev, r128Rev, r64Rev, 0
+};
 /** Carry-less multiply based implementation of a CRC32LE on a 64-bit input data (properly aligned).
  *  Assumption: only the first element of the data vector is to be considered.
  */
 static inline VUINT64_T crc32_le_clmul64_v2(VUINT64_T data) {
     // REV_CRC32_BE_INV_EXT=0xb4e5b025f7011641
-    uint64_t REV_CRC32_BE_INV_EXT = 0xb4e5b025f7011641ull;
     VUINT64_T rev_q = VCLMUL_VX(data, REV_CRC32_BE_INV_EXT, 1);
     // bit_reverse(FULL_CRC32_POLY_BE << 31, 64)) = 0x1db710641
-    uint64_t rem_cst = 0x1db710641ull; 
     VUINT64_T remainder = VCLMULH_VX(rev_q, rem_cst, 1);
     return remainder;
 }
 
 static inline vuint64m1_t crc32_le_clmul64_v2_m1(vuint64m1_t data) {
     // REV_CRC32_BE_INV_EXT=0xb4e5b025f7011641
-    uint64_t REV_CRC32_BE_INV_EXT = 0xb4e5b025f7011641ull;
     vuint64m1_t rev_q = __riscv_vclmul_vx_u64m1(data, REV_CRC32_BE_INV_EXT, 1);
     // bit_reverse(FULL_CRC32_POLY_BE << 31, 64)) = 0x1db710641
-    uint64_t rem_cst = 0x1db710641ull; 
     vuint64m1_t remainder = __riscv_vclmulh_vx_u64m1(rev_q, rem_cst, 1);
     return remainder;
 }
@@ -64,29 +84,8 @@ static inline vuint64m1_t crc32_le_clmul64_v2_m1(vuint64m1_t data) {
 uint32_t rv_crc32_le_vector_clmul_fold(uint32_t crc, unsigned char const *p, size_t len) {
     // FIXME: currently only crc=0 value is supported (value is never injected)
 
-    const uint64_t r64Rev  = 0xb8bc676500000000ull; // for m=63
-    const uint64_t r128Rev = 0x9ba54c6f00000000ull; // for m=127
-    const uint64_t r192Rev = 0x65673b4600000000ull; // [reverse on 64-bit] for X^191
-    const uint64_t r256Rev = 0x1b5fd1d00000000ull; // [reverse on 64-bit] for X^255
-    const uint64_t r320Rev = 0x9570d49500000000ull; // [reverse on 64-bit] for X^319
-    const uint64_t r384Rev = 0x2a28386200000000ull; // [reverse on 64-bit] for X^383
-    const uint64_t r448Rev = 0x69ccfc0d00000000ull; // [reverse on 64-bit] for X^447
-    const uint64_t r512Rev = 0xcad38e8f00000000ull; // [reverse on 64-bit] for X^511
-    const uint64_t r576Rev = 0x653d982200000000ull; // [reverse on 64-bit] for X^575
-    const uint64_t r640Rev = 0x8e42b13e00000000ull; // [reverse on 64-bit] for X^639
-    const uint64_t r704Rev = 0x5a03a0cf00000000ull; // [reverse on 64-bit] for X^703
-    const uint64_t r768Rev = 0x101a233100000000ull; // [reverse on 64-bit] for X^767
-    const uint64_t r832Rev = 0x759fc69d00000000ull; // [reverse on 64-bit] for X^831
-    const uint64_t r896Rev = 0xc64ac0b800000000ull; // [reverse on 64-bit] for X^895
-    const uint64_t r960Rev = 0x19866e800000000ull; // [reverse on 64-bit] for X^959
-    const uint64_t r1024Rev = 0x7406fa9500000000ull; // [reverse on 64-bit] for X^1023
 
     const size_t numBytesPerMainIteration = 16 * LMUL;
-    const uint64_t allLastFoldingCsts[17] = {
-        r1024Rev,
-        r960Rev, r896Rev, r832Rev, r768Rev, r704Rev, r640Rev, r576Rev, r512Rev,
-        r448Rev, r384Rev, r320Rev, r256Rev, r192Rev, r128Rev, r64Rev, 0
-    };
     const size_t numE64PerMainIteration = numBytesPerMainIteration / 8;
 
     const uint64_t *lastFoldingCsts = allLastFoldingCsts + 1 + (16 - numE64PerMainIteration);
