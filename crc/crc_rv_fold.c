@@ -23,13 +23,17 @@ static inline vuint64m1_t crc32_le_clmul64_v2(vuint64m1_t data) {
 uint32_t rv_crc32_le_vector_clmul_fold(uint32_t crc, unsigned char const *p, size_t len) {
     // FIXME: currently only crc=0 value is supported (value is never injected)
 
+    const size_t numBytesPerMainIteration = 16;
+    const size_t numE64PerMainIteration = numBytesPerMainIteration / 8;
+
     // RmRev=0x9ba54c6f00000000 R64Rev=0xb8bc676500000000
-    const uint64_t rmRev = 0x9ba54c6f00000000ull;
+    const uint64_t rmRev = 0x9ba54c6f00000000ull; // for m=127
+    const uint64_t r255Rev = 0x1b5fd1d00000000ull;
     const uint64_t r64Rev = 0xb8bc676500000000ull; 
-    vuint64m1_t acc = __riscv_vmv_v_x_u64m1(0, 2);
+    vuint64m1_t acc = __riscv_vmv_v_x_u64m1(0, numE64PerMainIteration);
     // Handling buffer alignment to ensure we can use 64-bit element vector loads (vle64),
     // without risking slowdown or trap on micro-architectures which do not support them (efficiently).
-    if (len >= 16 && ((size_t) p & 7) != 0) {
+    if (len >= numBytesPerMainIteration && ((size_t) p & 7) != 0) {
           size_t p_align_len = (size_t) p & 7;
           vuint8m1_t byte_data = __riscv_vle8_v_u8m1(p, p_align_len);
           vuint64m1_t data = __riscv_vreinterpret_v_u8m1_u64m1(byte_data);
@@ -42,7 +46,6 @@ uint32_t rv_crc32_le_vector_clmul_fold(uint32_t crc, unsigned char const *p, siz
     }
 
     // pre-computing loop boundaries to allow single update (pointer) in loop body
-    const size_t numBytesPerMainIteration = 16;
     int num_main_iterations = (len / numBytesPerMainIteration) - 1;
     num_main_iterations = num_main_iterations < 0 ? 0 : num_main_iterations;
     const uint8_t * p_limit = p + (num_main_iterations * numBytesPerMainIteration); 
@@ -51,32 +54,45 @@ uint32_t rv_crc32_le_vector_clmul_fold(uint32_t crc, unsigned char const *p, siz
           // since we have aligned p to a 8-byte boundary, we can safely load 64-bit elements
           // for the message (this should not be too slow / trap on uarchs which do not support mis-aligned
           // accesses natively). This saves somes vsetvli change.
-          vuint64m1_t data = __riscv_vle64_v_u64m1((const unsigned long int *) p, 2);
-          data = __riscv_vxor_vv_u64m1(acc, data, 2);
-          vuint64m1_t folded_rem_hi = __riscv_vclmulh_vx_u64m1(data, rmRev, 2);
-          vuint64m1_t folded_rem_lo = __riscv_vclmul_vx_u64m1(data, rmRev, 2);
+          vuint64m1_t data = __riscv_vle64_v_u64m1((const unsigned long int *) p, numE64PerMainIteration);
+          data = __riscv_vxor_vv_u64m1(acc, data, numE64PerMainIteration);
+          vuint64m1_t folded_rem_hi = __riscv_vclmulh_vx_u64m1(data, rmRev, numE64PerMainIteration);
+          vuint64m1_t folded_rem_lo = __riscv_vclmul_vx_u64m1(data, rmRev, numE64PerMainIteration);
 
-          vuint64m1_t lo_rem = __riscv_vclmulh_vx_u64m1(folded_rem_lo, r64Rev, 2);
-          acc = __riscv_vxor_vv_u64m1(lo_rem, folded_rem_hi, 2);
+          vuint64m1_t lo_rem = __riscv_vclmulh_vx_u64m1(folded_rem_lo, r64Rev, numE64PerMainIteration);
+          acc = __riscv_vxor_vv_u64m1(lo_rem, folded_rem_hi, numE64PerMainIteration);
     }
     len -= num_main_iterations * numBytesPerMainIteration;
     
     // New 16-byte data and accumulator handling
-    if (len >= 16) {
-          vuint64m1_t data = __riscv_vle64_v_u64m1((const unsigned long int *) p, 2);
-          data = __riscv_vxor_vv_u64m1(acc, data, 2);
+    if (len >= numBytesPerMainIteration) {
+          vuint64m1_t data = __riscv_vle64_v_u64m1((const unsigned long int *) p, numE64PerMainIteration);
+          data = __riscv_vxor_vv_u64m1(acc, data, numE64PerMainIteration);
+#if 0
           vuint64m1_t acc_hi = data;
           vuint64m1_t acc_lo = __riscv_vslidedown_vx_u64m1(data, 1, 1);
           vuint64m1_t remainder = crc32_le_clmul64_v2(acc_hi);
           remainder = __riscv_vxor_vv_u64m1(remainder, acc_lo, 1);
           acc = crc32_le_clmul64_v2(remainder);
-          len -= 16;
-          p += 16;
+#else
+          const uint64_t lastFoldingCsts[2] = {r64Rev};
+          vuint64m1_t vlastFoldingCsts = __riscv_vle64_v_u64m1(lastFoldingCsts, numE64PerMainIteration);
+
+          vuint64m1_t folded_rem_hi = __riscv_vclmulh_vv_u64m1(data, vlastFoldingCsts, numE64PerMainIteration);
+          vuint64m1_t folded_rem_lo = __riscv_vclmul_vv_u64m1(data, vlastFoldingCsts, numE64PerMainIteration);
+
+          vuint64m1_t lo_rem = __riscv_vclmulh_vv_u64m1(folded_rem_lo, vlastFoldingCsts, numE64PerMainIteration);
+          acc = __riscv_vxor_vv_u64m1_tu(data, lo_rem, folded_rem_hi, numE64PerMainIteration - 1);
+          vuint64m1_t vzero_u64m1 = __riscv_vmv_v_x_u64m1(0, 1);
+          acc = __riscv_vredxor_vs_u64m1_u64m1(acc, vzero_u64m1, numE64PerMainIteration);
+          acc = crc32_le_clmul64_v2(acc);
+#endif
+          len -= numBytesPerMainIteration;
+          p += numBytesPerMainIteration;
     }
 
     for (; len >= 8; len -=8, p += 8) {
-          vuint8m1_t byte_data = __riscv_vle8_v_u8m1(p, 8);
-          vuint64m1_t data = __riscv_vreinterpret_v_u8m1_u64m1(byte_data);
+          vuint64m1_t data = __riscv_vle64_v_u64m1((const unsigned long int*) p, 1);
           data = __riscv_vxor_vv_u64m1(acc, data, 1);
           acc = crc32_le_clmul64_v2(data);
     }
