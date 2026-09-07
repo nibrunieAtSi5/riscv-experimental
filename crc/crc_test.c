@@ -38,12 +38,16 @@ static inline uint64_t get_cycles() {
 #endif
 }
 
-#define MEASURE(NAME, FUNC, ...) \
+#define MEASURE(NAME, REF, FUNC, ...) \
     do { \
         uint64_t start = get_cycles(); \
         uint32_t res = FUNC(__VA_ARGS__); \
         uint64_t end = get_cycles(); \
-        printf("%-30s: 0x%08x (%" PRIu64 " cycles)\n", NAME, res, end - start); \
+        printf("%-36s: 0x%08x (%" PRIu64 " cycles)\n", NAME, res, end - start); \
+        if (res != REF) {\
+            printf("Error: %s: 0x%08x != 0x%08x\n", NAME, res, REF); \
+            return 1; \
+        }\
     } while (0)
 
 int main(int argc, char** argv) {
@@ -62,20 +66,24 @@ int main(int argc, char** argv) {
         
         printf("==========================================\n");
         printf("Buffer length: %zu\n", buffer_lens[i]);
+
+        uint32_t ref_crc32_be = crc32_be_base(0, buffer, buffer_lens[i]);
+        uint32_t ref_crc32_le = crc32_le_base(0, buffer, buffer_lens[i]);
+        uint32_t ref_crc32c = crc32c_base(0, buffer, buffer_lens[i]);
         
-        MEASURE("CRC32 BE", crc32_be_base, 0, buffer, buffer_lens[i]);
-        MEASURE("CRC32 LE", crc32_le_base, 0, buffer, buffer_lens[i]);
-        MEASURE("CRC32 LE generic", crc32_le_generic, 0, buffer, buffer_lens[i]);
+        MEASURE("CRC32 BE", ref_crc32_be, crc32_be_base, 0, buffer, buffer_lens[i]);
+        MEASURE("CRC32 LE", ref_crc32_le, crc32_le_base, 0, buffer, buffer_lens[i]);
+        MEASURE("CRC32 LE generic", ref_crc32_le, crc32_le_generic, 0, buffer, buffer_lens[i]);
 #if defined(__riscv)
-        MEASURE("CRC32 RV LE", rv_crc32_le, 0, buffer, buffer_lens[i]);
-        MEASURE("CRC32 RV LE opt", rv_crc32_le_opt, 0, buffer, buffer_lens[i]);
-        MEASURE("CRC32 RV LE vector clmul", rv_crc32_le_vector_clmul, 0, buffer, buffer_lens[i]);
-        MEASURE("CRC32 RV LE vector clmul fold (C)", rv_crc32_le_vector_clmul_fold, 0, buffer, buffer_lens[i]);
-        MEASURE("CRC32 RV LE vector clmul fold (asm)", rv_crc32_le_vector_clmul_fold_asm, 0, buffer, buffer_lens[i]);
-        MEASURE("CRC32C RV LE", rv_crc32c_le, 0, buffer, buffer_lens[i]);
+        MEASURE("CRC32 RV LE", ref_crc32_le, rv_crc32_le, 0, buffer, buffer_lens[i]);
+        MEASURE("CRC32 RV LE opt", ref_crc32_le, rv_crc32_le_opt, 0, buffer, buffer_lens[i]);
+        MEASURE("CRC32 RV LE vector clmul", ref_crc32_le, rv_crc32_le_vector_clmul, 0, buffer, buffer_lens[i]);
+        MEASURE("CRC32 RV LE vector clmul fold (C)", ref_crc32_le, rv_crc32_le_vector_clmul_fold, 0, buffer, buffer_lens[i]);
+        MEASURE("CRC32 RV LE vector clmul fold (asm)", ref_crc32_le, rv_crc32_le_vector_clmul_fold_asm, 0, buffer, buffer_lens[i]);
+        MEASURE("CRC32C RV LE", ref_crc32c, rv_crc32c_le, 0, buffer, buffer_lens[i]);
 #endif // defined(__riscv) 
 
-        MEASURE("CRC32C LE", crc32c_base, 0, buffer, buffer_lens[i]);
+        MEASURE("CRC32C LE", ref_crc32c, crc32c_base, 0, buffer, buffer_lens[i]);
         free(buffer);
     }
 
