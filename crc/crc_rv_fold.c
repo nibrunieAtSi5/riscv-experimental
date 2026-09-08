@@ -54,6 +54,7 @@ const uint64_t r832Rev = 0x759fc69d00000000ull; // [reverse on 64-bit] for X^831
 const uint64_t r896Rev = 0xc64ac0b800000000ull; // [reverse on 64-bit] for X^895
 const uint64_t r960Rev = 0x19866e800000000ull; // [reverse on 64-bit] for X^959
 const uint64_t r1024Rev = 0x7406fa9500000000ull; // [reverse on 64-bit] for X^1023
+const uint64_t r2048Rev = 0x3f9f86300000000ull; // [reverse on 64-bit] for X^2047
 const uint64_t allLastFoldingCsts[17] = {
     r1024Rev,
     r960Rev, r896Rev, r832Rev, r768Rev, r704Rev, r640Rev, r576Rev, r512Rev,
@@ -89,7 +90,12 @@ uint32_t rv_crc32_le_vector_clmul_fold(uint32_t crc, unsigned char const *p, siz
     const size_t numE64PerMainIteration = numBytesPerMainIteration / 8;
 
     const uint64_t *lastFoldingCsts = allLastFoldingCsts + 1 + (16 - numE64PerMainIteration);
-    const uint64_t rmRev = allLastFoldingCsts[16 - 2 * LMUL]; // for m=127
+    const uint64_t rmRev = allLastFoldingCsts[16 - 2 * LMUL];
+#if LMUL != 8
+    const uint64_t r2mRev = allLastFoldingCsts[16 - 4 * LMUL];
+#else
+    const uint64_t r2mRev = r2048Rev;
+#endif
 
 
     // large accumulator
@@ -117,18 +123,45 @@ uint32_t rv_crc32_le_vector_clmul_fold(uint32_t crc, unsigned char const *p, siz
     num_main_iterations = num_main_iterations < 0 ? 0 : num_main_iterations;
     const uint8_t * p_limit = p + (num_main_iterations * numBytesPerMainIteration); 
 
-    for (; p < p_limit; p += numBytesPerMainIteration) {
-        // printf("Main %zu-byte loop\n", numBytesPerMainIteration);
+#if 1
+    // double iterations:
+    // the first one loads the data and xor them with the accumulator, and reduce both over the second iteration to the new accumulator
+    // the second one loads the data and reduce them to the new accumulator index, before xor-ing into it.
+    // the high part (*_rem_lo in little-endian) are XOR-ed together before being reduced to the accumulator position (those part are only 32-bit wide, left aligned)
+    const uint8_t * p_limit_double_it = p + (num_main_iterations >> 1) * 2 * numBytesPerMainIteration; 
+    for (; p < p_limit_double_it; p += 2 * numBytesPerMainIteration) {
           // since we have aligned p to a 8-byte boundary, we can safely load 64-bit elements
           // for the message (this should not be too slow / trap on uarchs which do not support mis-aligned
           // accesses natively). This saves somes vsetvli change.
-          VUINT64_T data = VLE64_V((const unsigned long int *) p, numE64PerMainIteration);
-          data = VXOR_VV(acc, data, numE64PerMainIteration);
-          VUINT64_T folded_rem_hi = VCLMULH_VX(data, rmRev, numE64PerMainIteration);
-          VUINT64_T folded_rem_lo = VCLMUL_VX(data, rmRev, numE64PerMainIteration);
+          VUINT64_T data_hi = VLE64_V((const unsigned long int *) p, numE64PerMainIteration);
+          data_hi = VXOR_VV(acc, data_hi, numE64PerMainIteration);
+          VUINT64_T folded_hi_rem_hi = VCLMULH_VX(data_hi, r2mRev, numE64PerMainIteration);
+          VUINT64_T folded_hi_rem_lo = VCLMUL_VX(data_hi, r2mRev, numE64PerMainIteration);
 
+          VUINT64_T data_lo = VLE64_V((const unsigned long int *) (p + numBytesPerMainIteration), numE64PerMainIteration);
+          VUINT64_T folded_lo_rem_hi = VCLMULH_VX(data_lo, rmRev, numE64PerMainIteration);
+          VUINT64_T folded_lo_rem_lo = VCLMUL_VX(data_lo, rmRev, numE64PerMainIteration);
+
+        VUINT64_T folded_rem_lo = VXOR_VV(folded_hi_rem_lo, folded_lo_rem_lo, numE64PerMainIteration);
+        VUINT64_T folded_rem_hi = VXOR_VV(folded_hi_rem_hi, folded_lo_rem_hi, numE64PerMainIteration);
+
+          // single folding of high part of folded rem
           VUINT64_T lo_rem = VCLMULH_VX(folded_rem_lo, r64Rev, numE64PerMainIteration);
           acc = VXOR_VV(lo_rem, folded_rem_hi, numE64PerMainIteration);
+    }
+#endif
+
+    for (; p < p_limit; p += numBytesPerMainIteration) {
+        // since we have aligned p to a 8-byte boundary, we can safely load 64-bit elements
+        // for the message (this should not be too slow / trap on uarchs which do not support mis-aligned
+        // accesses natively). This saves somes vsetvli change.
+        VUINT64_T data = VLE64_V((const unsigned long int *) p, numE64PerMainIteration);
+        data = VXOR_VV(acc, data, numE64PerMainIteration);
+        VUINT64_T folded_rem_hi = VCLMULH_VX(data, rmRev, numE64PerMainIteration);
+        VUINT64_T folded_rem_lo = VCLMUL_VX(data, rmRev, numE64PerMainIteration);
+
+        VUINT64_T lo_rem = VCLMULH_VX(folded_rem_lo, r64Rev, numE64PerMainIteration);
+        acc = VXOR_VV(lo_rem, folded_rem_hi, numE64PerMainIteration);
     }
     len -= num_main_iterations * numBytesPerMainIteration;
     
