@@ -183,7 +183,7 @@ uint32_t rv_crc32_le_vector_clmul(uint32_t crc, unsigned char const *p, size_t l
 
   // const uint32_t ethCRC32Poly = 0x04C11DB7;
   // const uint32_t ethCRC32PolyInv = 0xedb88320;
-  printf("len=%lu, crcAccBufferU8=%x, p=%x\n", len, crc32_le_generic(0, crcAccBufferU8, 8), crc32_le_generic(0, p, len));
+  // printf("len=%lu, crcAccBufferU8=%x, p=%x\n", len, crc32_le_generic(0, crcAccBufferU8, 8), crc32_le_generic(0, p, len));
   uint32_t pre_crc32 = crc32_le_generic(0, crcAccBufferU8, 8);
   uint8_t tail_buffer[8] = {0};
   if (len < 8) {
