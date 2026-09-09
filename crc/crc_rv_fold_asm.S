@@ -36,17 +36,11 @@ rv_crc32_le_vector_clmul_fold_asm:
 	add	a0,a1,t3
 	bgeu	a1,t1,.Lcheck_single
 	// r512Rev = 0xcaaf6e8f00000000
-	li	a3,-892104704
+	ld	a3, rva_r512Rev
 	// r256Rev = 0x01b5fd1d00000000
-	li	a4,28704768
+	ld	a4, rva_r256Rev
 	// r64Rev = 0xb8bc676500000000
-	li	a7,-1195614208
-	addi	a3,a3,-369
-	addi	a4,a4,-739
-	addi	a7,a7,1893
-	slli	a3,a3,32
-	slli	a4,a4,32
-	slli	a7,a7,32
+	ld	a7, rva_r64Rev
 	mv	a5,a1
 .Lloop_double:
 	vle64.v	v4,0(a5)
@@ -67,13 +61,9 @@ rv_crc32_le_vector_clmul_fold_asm:
 .Lcheck_single:
 	bleu	a0,a1,.Lreduce_acc
 	// r256Rev = 0x01b5fd1d00000000
-	li	a4,28704768
+	ld	a4, rva_r256Rev
 	// r64Rev = 0xb8bc676500000000
-	li	a3,-1195614208
-	addi	a4,a4,-739
-	addi	a3,a3,1893
-	slli	a4,a4,32
-	slli	a3,a3,32
+	ld	a3, rva_r64Rev
 	mv	a5,a1
 .Lloop_single:
 	vle64.v	v4,0(a5)
@@ -101,35 +91,24 @@ rv_crc32_le_vector_clmul_fold_asm:
 	addi	a5,a5,%lo(.LANCHOR0+104)
 	vle64.v	v4,0(a5)
 	// r64Rev = 0xb8bc676500000000
-	li	a4,-1195614208
-	addi	a4,a4,1893
+	ld	a4, rva_r64Rev
 	vxor.vv	v2,v2,v6
 	vsetivli	zero,1,e64,m1,ta,ma
 	vmv.v.i	v1,0
 	vsetivli	zero,4,e64,m2,ta,ma
 	vclmul.vv	v6,v2,v4
-	slli	a4,a4,32
 	vclmulh.vv	v4,v2,v4
 	// REV_CRC32_BE_INV_EXT = 0xb4e5b025f7011641
-	li	a5,-39374848
+	ld	a5, rva_REV_CRC32_BE_INV_EXT
 	vclmulh.vx	v6,v6,a4
 	vsetivli	zero,3,e64,m2,tu,ma
-	addi	a5,a5,-639
-	slli	a5,a5,13
 	vxor.vv	v2,v6,v4
 	vsetivli	zero,4,e64,m2,ta,ma
-	addi	a5,a5,1527
 	vredxor.vs	v2,v2,v1
-	slli	a5,a5,12
-	addi	a5,a5,17
-	slli	a5,a5,12
 	vsetivli	zero,1,e64,m1,ta,ma
-	addi	a5,a5,1601
 	// rem_cst = 0x1db710641
-	li	a4,498536448
-	slli	a4,a4,4
+	ld	a4, rva_rem_cst
 	vclmul.vx	v2,v2,a5
-	addi	a4,a4,1601
 	addi	a2,a2,-32
 	addi	a1,a1,32
 	vclmulh.vx	v1,v2,a4
@@ -137,22 +116,13 @@ rv_crc32_le_vector_clmul_fold_asm:
 	li	a5,7
 	bleu	a2,a5,.Lepilog
 	// REV_CRC32_BE_INV_EXT = 0xb4e5b025f7011641
-	li	a4,-39374848
-	addi	a4,a4,-639
-	slli	a4,a4,13
-	addi	a4,a4,1527
-	slli	a4,a4,12
+	ld	a4, rva_REV_CRC32_BE_INV_EXT
 	srli	a5,a2,3
-	addi	a4,a4,17
 	// rem_cst = 0x1db710641
-	li	a3,498536448
+	ld	a3, rva_rem_cst
 	slli	a0,a5,3
-	slli	a4,a4,12
-	slli	a3,a3,4
 	addi	a6,a5,-1
-	addi	a4,a4,1601
 	add	a0,a1,a0
-	addi	a3,a3,1601
 	mv	a5,a1
 .Lloop_8_byte:
 	vle64.v	v2,0(a5)
@@ -172,24 +142,15 @@ rv_crc32_le_vector_clmul_fold_asm:
 	li	a4,8
 	sub	a4,a4,a2
 	// REV_CRC32_BE_INV_EXT = 0xb4e5b025f7011641
-	li	a5,-39374848
+	ld	a5, rva_REV_CRC32_BE_INV_EXT
 	vsetivli	zero,1,e64,m1,ta,ma
 	slli	a4,a4,3
-	addi	a5,a5,-639
 	vsll.vx	v3,v1,a4
 	vsll.vx	v2,v2,a4
-	slli	a5,a5,13
-	addi	a5,a5,1527
-	slli	a5,a5,12
 	vxor.vv	v2,v2,v3
-	addi	a5,a5,17
-	slli	a5,a5,12
-	addi	a5,a5,1601
 	vclmul.vx	v2,v2,a5
 	// rem_cst = 0x1db710641
-	li	a5,498536448
-	slli	a5,a5,4
-	addi	a5,a5,1601
+	ld	a5, rva_rem_cst
 	li	a3,64
 	vclmulh.vx	v2,v2,a5
 	sub	a5,a3,a4
@@ -207,24 +168,15 @@ rv_crc32_le_vector_clmul_fold_asm:
 	vsetvli	zero,a4,e8,m2,ta,ma
 	vle8.v	v2,0(a1)
 	// REV_CRC32_BE_INV_EXT = 0xb4e5b025f7011641
-	li	a5,-39374848
-	addi	a5,a5,-639
+	ld	a5, rva_REV_CRC32_BE_INV_EXT
 	li	a3,8
-	slli	a5,a5,13
 	sub	a3,a3,a4
-	addi	a5,a5,1527
 	vsetivli	zero,1,e64,m2,ta,ma
 	slli	a3,a3,3
-	slli	a5,a5,12
 	vsll.vx	v2,v2,a3
-	addi	a5,a5,17
-	slli	a5,a5,12
-	addi	a5,a5,1601
 	vclmul.vx	v2,v2,a5
 	// rem_cst = 0x1db710641
-	li	a5,498536448
-	slli	a5,a5,4
-	addi	a5,a5,1601
+	ld	a5, rva_rem_cst
 	vclmulh.vx	v2,v2,a5
 	sub	a2,a2,a4
 	add	a1,a1,a4
