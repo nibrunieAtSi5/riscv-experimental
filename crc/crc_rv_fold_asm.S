@@ -16,25 +16,25 @@ rv_crc32_le_vector_clmul_fold_asm:
 	// Invariants:
 	// TBD
 	li	a5,31
-	bleu	a2,a5,.L2
+	bleu	a2,a5,.Linit_acc
 	andi	a4,a1,7
-	bne	a4,zero,.L3
-.L2:
+	bne	a4,zero,.Lprolog_align
+.Linit_acc:
 	vsetivli	zero,4,e64,m2,ta,ma
 	vmv.v.i	v2,0
-.L4:
+.Lloop_bounds:
 	srli	a4,a2,5
 	addiw	a4,a4,-1
 	sext.w	a5,a4
-	bge	a4,zero,.L5
+	bge	a4,zero,.Lbound_calc
 	li	a5,0
-.L5:
+.Lbound_calc:
 	sraiw	t4,a5,1
 	slli	t4,t4,6
 	slli	t3,a5,5
 	add	t1,a1,t4
 	add	a0,a1,t3
-	bgeu	a1,t1,.L6
+	bgeu	a1,t1,.Lcheck_single
 	li	a3,-892104704
 	li	a4,28704768
 	li	a7,-1195614208
@@ -45,7 +45,7 @@ rv_crc32_le_vector_clmul_fold_asm:
 	slli	a4,a4,32
 	slli	a7,a7,32
 	mv	a5,a1
-.L7:
+.Lloop_double:
 	vle64.v	v4,0(a5)
 	addi	a6,a5,32
 	vle64.v	v6,0(a6)
@@ -59,10 +59,10 @@ rv_crc32_le_vector_clmul_fold_asm:
 	vxor.vv	v2,v2,v6
 	vclmulh.vx	v4,v4,a7
 	vxor.vv	v2,v4,v2
-	bgtu	t1,a5,.L7
+	bgtu	t1,a5,.Lloop_double
 	add	a1,a1,t4
-.L6:
-	bleu	a0,a1,.L8
+.Lcheck_single:
+	bleu	a0,a1,.Lreduce_acc
 	li	a4,28704768
 	li	a3,-1195614208
 	addi	a4,a4,-739
@@ -70,7 +70,7 @@ rv_crc32_le_vector_clmul_fold_asm:
 	slli	a4,a4,32
 	slli	a3,a3,32
 	mv	a5,a1
-.L9:
+.Lloop_single:
 	vle64.v	v4,0(a5)
 	addi	a5,a5,32
 	vxor.vv	v2,v2,v4
@@ -78,18 +78,18 @@ rv_crc32_le_vector_clmul_fold_asm:
 	vclmulh.vx	v2,v2,a4
 	vclmulh.vx	v4,v4,a3
 	vxor.vv	v2,v4,v2
-	bgtu	a0,a5,.L9
+	bgtu	a0,a5,.Lloop_single
 	addi	a0,a0,-1
 	sub	a0,a0,a1
 	andi	a0,a0,-32
 	addi	a1,a1,32
 	add	a1,a0,a1
-.L8:
+.Lreduce_acc:
 	vsetivli	zero,1,e64,m1,ta,ma
 	sub	a2,a2,t3
 	li	a5,31
 	vmv1r.v	v1,v2
-	bleu	a2,a5,.L11
+	bleu	a2,a5,.Lsetup_8_byte
 	vsetivli	zero,4,e64,m2,ta,ma
 	vle64.v	v6,0(a1)
 	lui	a5,%hi(.LANCHOR0+104)
@@ -125,9 +125,9 @@ rv_crc32_le_vector_clmul_fold_asm:
 	addi	a2,a2,-32
 	addi	a1,a1,32
 	vclmulh.vx	v1,v2,a4
-.L11:
+.Lsetup_8_byte:
 	li	a5,7
-	bleu	a2,a5,.L13
+	bleu	a2,a5,.Lepilog
 	li	a4,-39374848
 	addi	a4,a4,-639
 	slli	a4,a4,13
@@ -144,19 +144,19 @@ rv_crc32_le_vector_clmul_fold_asm:
 	add	a0,a1,a0
 	addi	a3,a3,1601
 	mv	a5,a1
-.L12:
+.Lloop_8_byte:
 	vle64.v	v2,0(a5)
 	addi	a5,a5,8
 	vxor.vv	v1,v1,v2
 	vclmul.vx	v1,v1,a4
 	vclmulh.vx	v1,v1,a3
-	bne	a5,a0,.L12
+	bne	a5,a0,.Lloop_8_byte
 	addi	a1,a1,8
 	slli	a5,a6,3
 	add	a1,a1,a5
 	andi	a2,a2,7
-.L13:
-	beq	a2,zero,.L23
+.Lepilog:
+	beq	a2,zero,.Lreturn
 	vsetvli	zero,a2,e64,m8,ta,ma
 	vle8.v	v2,0(a1)
 	li	a4,8
@@ -186,12 +186,12 @@ rv_crc32_le_vector_clmul_fold_asm:
 	vmv.x.s	a0,v1
 	sext.w	a0,a0
 	ret
-.L23:
+.Lreturn:
 	vsetvli	zero,a2,e64,m8,ta,ma
 	vmv.x.s	a0,v1
 	sext.w	a0,a0
 	ret
-.L3:
+.Lprolog_align:
 	vsetvli	zero,a4,e8,m2,ta,ma
 	vle8.v	v2,0(a1)
 	li	a5,-39374848
@@ -215,7 +215,7 @@ rv_crc32_le_vector_clmul_fold_asm:
 	sub	a2,a2,a4
 	add	a1,a1,a4
 	vsetivli	zero,4,e64,m2,ta,ma
-	j	.L4
+	j	.Lloop_bounds
 	.size	rv_crc32_le_vector_clmul_fold_asm, .-rv_crc32_le_vector_clmul_fold_asm
 	.globl	rva_allLastFoldingCsts
 	.globl	rva_r2048Rev
