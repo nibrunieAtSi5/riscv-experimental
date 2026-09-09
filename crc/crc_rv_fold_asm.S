@@ -35,8 +35,11 @@ rv_crc32_le_vector_clmul_fold_asm:
 	add	t1,a1,t4
 	add	a0,a1,t3
 	bgeu	a1,t1,.Lcheck_single
+	// r512Rev = 0xcaaf6e8f00000000
 	li	a3,-892104704
+	// r256Rev = 0x01b5fd1d00000000
 	li	a4,28704768
+	// r64Rev = 0xb8bc676500000000
 	li	a7,-1195614208
 	addi	a3,a3,-369
 	addi	a4,a4,-739
@@ -63,7 +66,9 @@ rv_crc32_le_vector_clmul_fold_asm:
 	add	a1,a1,t4
 .Lcheck_single:
 	bleu	a0,a1,.Lreduce_acc
+	// r256Rev = 0x01b5fd1d00000000
 	li	a4,28704768
+	// r64Rev = 0xb8bc676500000000
 	li	a3,-1195614208
 	addi	a4,a4,-739
 	addi	a3,a3,1893
@@ -95,6 +100,7 @@ rv_crc32_le_vector_clmul_fold_asm:
 	lui	a5,%hi(.LANCHOR0+104)
 	addi	a5,a5,%lo(.LANCHOR0+104)
 	vle64.v	v4,0(a5)
+	// r64Rev = 0xb8bc676500000000
 	li	a4,-1195614208
 	addi	a4,a4,1893
 	vxor.vv	v2,v2,v6
@@ -104,6 +110,7 @@ rv_crc32_le_vector_clmul_fold_asm:
 	vclmul.vv	v6,v2,v4
 	slli	a4,a4,32
 	vclmulh.vv	v4,v2,v4
+	// REV_CRC32_BE_INV_EXT = 0xb4e5b025f7011641
 	li	a5,-39374848
 	vclmulh.vx	v6,v6,a4
 	vsetivli	zero,3,e64,m2,tu,ma
@@ -118,6 +125,7 @@ rv_crc32_le_vector_clmul_fold_asm:
 	slli	a5,a5,12
 	vsetivli	zero,1,e64,m1,ta,ma
 	addi	a5,a5,1601
+	// rem_cst = 0x1db710641
 	li	a4,498536448
 	slli	a4,a4,4
 	vclmul.vx	v2,v2,a5
@@ -128,6 +136,7 @@ rv_crc32_le_vector_clmul_fold_asm:
 .Lsetup_8_byte:
 	li	a5,7
 	bleu	a2,a5,.Lepilog
+	// REV_CRC32_BE_INV_EXT = 0xb4e5b025f7011641
 	li	a4,-39374848
 	addi	a4,a4,-639
 	slli	a4,a4,13
@@ -135,6 +144,7 @@ rv_crc32_le_vector_clmul_fold_asm:
 	slli	a4,a4,12
 	srli	a5,a2,3
 	addi	a4,a4,17
+	// rem_cst = 0x1db710641
 	li	a3,498536448
 	slli	a0,a5,3
 	slli	a4,a4,12
@@ -161,6 +171,7 @@ rv_crc32_le_vector_clmul_fold_asm:
 	vle8.v	v2,0(a1)
 	li	a4,8
 	sub	a4,a4,a2
+	// REV_CRC32_BE_INV_EXT = 0xb4e5b025f7011641
 	li	a5,-39374848
 	vsetivli	zero,1,e64,m1,ta,ma
 	slli	a4,a4,3
@@ -175,6 +186,7 @@ rv_crc32_le_vector_clmul_fold_asm:
 	slli	a5,a5,12
 	addi	a5,a5,1601
 	vclmul.vx	v2,v2,a5
+	// rem_cst = 0x1db710641
 	li	a5,498536448
 	slli	a5,a5,4
 	addi	a5,a5,1601
@@ -194,6 +206,7 @@ rv_crc32_le_vector_clmul_fold_asm:
 .Lprolog_align:
 	vsetvli	zero,a4,e8,m2,ta,ma
 	vle8.v	v2,0(a1)
+	// REV_CRC32_BE_INV_EXT = 0xb4e5b025f7011641
 	li	a5,-39374848
 	addi	a5,a5,-639
 	li	a3,8
@@ -208,6 +221,7 @@ rv_crc32_le_vector_clmul_fold_asm:
 	slli	a5,a5,12
 	addi	a5,a5,1601
 	vclmul.vx	v2,v2,a5
+	// rem_cst = 0x1db710641
 	li	a5,498536448
 	slli	a5,a5,4
 	addi	a5,a5,1601
