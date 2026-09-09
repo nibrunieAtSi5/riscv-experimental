@@ -257,100 +257,100 @@ rv_crc32_le_vector_clmul_fold_asm:
 	.type	rva_allLastFoldingCsts, @object
 	.size	rva_allLastFoldingCsts, 136
 rva_allLastFoldingCsts:
-	.dword	8360645276116975616
-	.dword	114954937116393472
-	.dword	-4158299409416716288
-	.dword	8475711401346727936
-	.dword	1160278547361693696
-	.dword	6486204699262320640
-	.dword	-8195793492014792704
-	.dword	7295154243206381568
-	.dword	-3831562113130692608
-	.dword	7623745401996181504
-	.dword	3037739942219350016
-	.dword	-7678403628251480064
-	.dword	123282865818435584
-	.dword	7306874092265668608
-	.dword	-7231289587048382464
-	.dword	-5135115791619850240
-	.dword	0
+	.dword	0x7406fa9500000000
+	.dword	0x19866e800000000
+	.dword	0xc64ac0b800000000
+	.dword	0x759fc69d00000000
+	.dword	0x101a233100000000
+	.dword	0x5a03a0cf00000000
+	.dword	0x8e42b13e00000000
+	.dword	0x653d982200000000
+	.dword	0xcad38e8f00000000
+	.dword	0x69ccfc0d00000000
+	.dword	0x2a28386200000000
+	.dword	0x9570d49500000000
+	.dword	0x1b5fd1d00000000
+	.dword	0x65673b4600000000
+	.dword	0x9ba54c6f00000000
+	.dword	0xb8bc676500000000
+	.dword	0x0
 	.section	.srodata,"a"
 	.align	3
 	.type	rva_r2048Rev, @object
 	.size	rva_r2048Rev, 8
 rva_r2048Rev:
-	.dword	286533155400187904
+	.dword	0x3f9f86300000000
 	.type	rva_r1024Rev, @object
 	.size	rva_r1024Rev, 8
 rva_r1024Rev:
-	.dword	8360645276116975616
+	.dword	0x7406fa9500000000
 	.type	rva_r960Rev, @object
 	.size	rva_r960Rev, 8
 rva_r960Rev:
-	.dword	114954937116393472
+	.dword	0x19866e800000000
 	.type	rva_r896Rev, @object
 	.size	rva_r896Rev, 8
 rva_r896Rev:
-	.dword	-4158299409416716288
+	.dword	0xc64ac0b800000000
 	.type	rva_r832Rev, @object
 	.size	rva_r832Rev, 8
 rva_r832Rev:
-	.dword	8475711401346727936
+	.dword	0x759fc69d00000000
 	.type	rva_r768Rev, @object
 	.size	rva_r768Rev, 8
 rva_r768Rev:
-	.dword	1160278547361693696
+	.dword	0x101a233100000000
 	.type	rva_r704Rev, @object
 	.size	rva_r704Rev, 8
 rva_r704Rev:
-	.dword	6486204699262320640
+	.dword	0x5a03a0cf00000000
 	.type	rva_r640Rev, @object
 	.size	rva_r640Rev, 8
 rva_r640Rev:
-	.dword	-8195793492014792704
+	.dword	0x8e42b13e00000000
 	.type	rva_r576Rev, @object
 	.size	rva_r576Rev, 8
 rva_r576Rev:
-	.dword	7295154243206381568
+	.dword	0x653d982200000000
 	.type	rva_r512Rev, @object
 	.size	rva_r512Rev, 8
 rva_r512Rev:
-	.dword	-3831562113130692608
+	.dword	0xcad38e8f00000000
 	.type	rva_r448Rev, @object
 	.size	rva_r448Rev, 8
 rva_r448Rev:
-	.dword	7623745401996181504
+	.dword	0x69ccfc0d00000000
 	.type	rva_r384Rev, @object
 	.size	rva_r384Rev, 8
 rva_r384Rev:
-	.dword	3037739942219350016
+	.dword	0x2a28386200000000
 	.type	rva_r320Rev, @object
 	.size	rva_r320Rev, 8
 rva_r320Rev:
-	.dword	-7678403628251480064
+	.dword	0x9570d49500000000
 	.type	rva_r256Rev, @object
 	.size	rva_r256Rev, 8
 rva_r256Rev:
-	.dword	123282865818435584
+	.dword	0x1b5fd1d00000000
 	.type	rva_r192Rev, @object
 	.size	rva_r192Rev, 8
 rva_r192Rev:
-	.dword	7306874092265668608
+	.dword	0x65673b4600000000
 	.type	rva_r128Rev, @object
 	.size	rva_r128Rev, 8
 rva_r128Rev:
-	.dword	-7231289587048382464
+	.dword	0x9ba54c6f00000000
 	.type	rva_r64Rev, @object
 	.size	rva_r64Rev, 8
 rva_r64Rev:
-	.dword	-5135115791619850240
+	.dword	0xb8bc676500000000
 	.type	rva_rem_cst, @object
 	.size	rva_rem_cst, 8
 rva_rem_cst:
-	.dword	7976584769
+	.dword	0x1db710641
 	.type	rva_REV_CRC32_BE_INV_EXT, @object
 	.size	rva_REV_CRC32_BE_INV_EXT, 8
 rva_REV_CRC32_BE_INV_EXT:
-	.dword	-5411725700111460799
+	.dword	0xb4e5b025f7011641
 	.ident	"GCC: () 16.1.0"
 	.section	.note.GNU-stack,"",@progbits
