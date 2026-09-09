@@ -116,8 +116,8 @@ uint32_t rv_crc32_le_vector_clmul(uint32_t crc, unsigned char const *p, size_t l
   // {(X^64 mod P), (X^32 mod P)}
   // const uint32_t redConstants[] = {0x177b1443, 0x3d6029b0};
   const uint32_t redConstants[] = {
-    /* CRC32(X^64) */ 0xf200aa66,
-    /* CRC32(X^32) */ 0x490d678d,
+    /* CRC32_BE(X^64) */ 0xf200aa66,
+    /* CRC32_BE(X^32) */ 0x490d678d,
   };
   vuint32mf2_t redConstantVector = __riscv_vle32_v_u32mf2(redConstants, 2);
   vuint64m1_t extRedCstVector = __riscv_vzext_vf2_u64m1(redConstantVector, 2);

@@ -51,7 +51,8 @@ static inline uint64_t get_cycles() {
     } while (0)
 
 int main(int argc, char** argv) {
-    size_t buffer_lens[] = {7, 8, 15, 16, 17, 32, 128, 2047, 2048, 2049};
+    size_t buffer_lens[] = {5, 9, 13, 17, 15, 16, 17, 32, 64, 128, 127, 129, 128, 2047, 2048, 2049, 4095, 4096, 4097};
+    // size_t buffer_lens[] = {4095, 4096, 4097};
 
     for (int i = 0; i < sizeof(buffer_lens) / sizeof(size_t); i++) {
         uint8_t* buffer = malloc(buffer_lens[i]);
@@ -61,7 +62,7 @@ int main(int argc, char** argv) {
         }
         // randomizing buffer content
         for (int j = 0; j < buffer_lens[i]; j++) {
-            buffer[j] = (j == 0) ? 0x1 : 0; //  (uint8_t) ((j * 3) % 256) : ((uint8_t) ((j * 3) % 256)); //rand();
+            buffer[j] = rand(); // (j == 0) ? 0x1 : 0; //  (uint8_t) ((j * 3) % 256) : ((uint8_t) ((j * 3) % 256)); //rand();
         }
         
         printf("==========================================\n");
