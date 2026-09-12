@@ -75,7 +75,7 @@ rv_crc32_le_vector_clmul_fold_asm:
 	bne	a4,zero,.Lprolog_align
 .Linit_acc:
 	vsetivli	zero,NUM_E64,e64,V_LMUL,ta,ma
-	vmv.v.i	v2,0
+	vmv.v.i	v8,0
 .Lloop_bounds:
 	srli	a4,a2,LOG2_NUM_BYTES
 	addiw	a4,a4,-1
@@ -97,19 +97,19 @@ rv_crc32_le_vector_clmul_fold_asm:
 	LDRVA(a7, r64Rev)
 	mv	a5,a1
 .Lloop_double:
-	vle64.v	v4,0(a5)
+	vle64.v	v16,0(a5)
 	addi	a6,a5,NUM_BYTES
-	vle64.v	v6,0(a6)
+	vle64.v	v24,0(a6)
 	addi	a5,a5,DOUBLE_BYTES
-	vxor.vv	v2,v2,v4
-	vclmul.vx	v8,v6,a4
-	vclmul.vx	v4,v2,a3
-	vclmulh.vx	v6,v6,a4
-	vclmulh.vx	v2,v2,a3
-	vxor.vv	v4,v4,v8
-	vxor.vv	v2,v2,v6
-	vclmulh.vx	v4,v4,a7
-	vxor.vv	v2,v4,v2
+	vxor.vv	v8,v8,v16
+	vclmul.vx	v0,v24,a4
+	vclmul.vx	v16,v8,a3
+	vclmulh.vx	v24,v24,a4
+	vclmulh.vx	v8,v8,a3
+	vxor.vv	v16,v16,v0
+	vxor.vv	v8,v8,v24
+	vclmulh.vx	v16,v16,a7
+	vxor.vv	v8,v16,v8
 	bgtu	t1,a5,.Lloop_double
 	add	a1,a1,t4
 .Lcheck_single:
@@ -120,13 +120,13 @@ rv_crc32_le_vector_clmul_fold_asm:
 	LDRVA(a3, r64Rev)
 	mv	a5,a1
 .Lloop_single:
-	vle64.v	v4,0(a5)
+	vle64.v	v16,0(a5)
 	addi	a5,a5,NUM_BYTES
-	vxor.vv	v2,v2,v4
-	vclmul.vx	v4,v2,a4
-	vclmulh.vx	v2,v2,a4
-	vclmulh.vx	v4,v4,a3
-	vxor.vv	v2,v4,v2
+	vxor.vv	v8,v8,v16
+	vclmul.vx	v16,v8,a4
+	vclmulh.vx	v8,v8,a4
+	vclmulh.vx	v16,v16,a3
+	vxor.vv	v8,v16,v8
 	bgtu	a0,a5,.Lloop_single
 	addi	a0,a0,-1
 	sub	a0,a0,a1
@@ -137,34 +137,34 @@ rv_crc32_le_vector_clmul_fold_asm:
 	vsetivli	zero,1,e64,m1,ta,ma
 	sub	a2,a2,t3
 	li	a5,31
-	vmv1r.v	v1,v2
+	vmv1r.v	v1,v8
 	bleu	a2,a5,.Lsetup_8_byte
 	vsetivli	zero,NUM_E64,e64,V_LMUL,ta,ma
-	vle64.v	v6,0(a1)
+	vle64.v	v24,0(a1)
 	la	a5, rva_allLastFoldingCsts + ((17 - NUM_E64) * 8)
-	vle64.v	v4,0(a5)
+	vle64.v	v16,0(a5)
 	// r64Rev = 0xb8bc676500000000
 	LDRVA(a4, r64Rev)
-	vxor.vv	v2,v2,v6
+	vxor.vv	v8,v8,v24
 	vsetivli	zero,1,e64,m1,ta,ma
 	vmv.v.i	v1,0
 	vsetivli	zero,NUM_E64,e64,V_LMUL,ta,ma
-	vclmul.vv	v6,v2,v4
-	vclmulh.vv	v4,v2,v4
+	vclmul.vv	v24,v8,v16
+	vclmulh.vv	v16,v8,v16
 	// REV_CRC32_BE_INV_EXT = 0xb4e5b025f7011641
 	LDRVA(a5, REV_CRC32_BE_INV_EXT)
-	vclmulh.vx	v6,v6,a4
+	vclmulh.vx	v24,v24,a4
 	vsetivli	zero,NUM_E64_M_1,e64,V_LMUL,tu,ma
-	vxor.vv	v2,v6,v4
+	vxor.vv	v8,v24,v16
 	vsetivli	zero,NUM_E64,e64,V_LMUL,ta,ma
-	vredxor.vs	v2,v2,v1
+	vredxor.vs	v4,v8,v1
 	vsetivli	zero,1,e64,m1,ta,ma
 	// rem_cst = 0x1db710641
 	LDRVA(a4, rem_cst)
-	vclmul.vx	v2,v2,a5
+	vclmul.vx	v8,v4,a5
 	addi	a2,a2,-NUM_BYTES
 	addi	a1,a1,NUM_BYTES
-	vclmulh.vx	v1,v2,a4
+	vclmulh.vx	v1,v8,a4
 .Lsetup_8_byte:
 	li	a5,7
 	bleu	a2,a5,.Lepilog
@@ -178,9 +178,9 @@ rv_crc32_le_vector_clmul_fold_asm:
 	add	a0,a1,a0
 	mv	a5,a1
 .Lloop_8_byte:
-	vle64.v	v2,0(a5)
+	vle64.v	v8,0(a5)
 	addi	a5,a5,8
-	vxor.vv	v1,v1,v2
+	vxor.vv	v1,v1,v8
 	vclmul.vx	v1,v1,a4
 	vclmulh.vx	v1,v1,a3
 	bne	a5,a0,.Lloop_8_byte
@@ -191,7 +191,7 @@ rv_crc32_le_vector_clmul_fold_asm:
 .Lepilog:
 	beq	a2,zero,.Lreturn
 	vsetvli	zero,a2,e64,m8,ta,ma
-	vle8.v	v2,0(a1)
+	vle8.v	v8,0(a1)
 	li	a4,8
 	sub	a4,a4,a2
 	// REV_CRC32_BE_INV_EXT = 0xb4e5b025f7011641
@@ -199,16 +199,16 @@ rv_crc32_le_vector_clmul_fold_asm:
 	vsetivli	zero,1,e64,m1,ta,ma
 	slli	a4,a4,3
 	vsll.vx	v3,v1,a4
-	vsll.vx	v2,v2,a4
-	vxor.vv	v2,v2,v3
-	vclmul.vx	v2,v2,a5
+	vsll.vx	v8,v8,a4
+	vxor.vv	v8,v8,v3
+	vclmul.vx	v8,v8,a5
 	// rem_cst = 0x1db710641
 	LDRVA(a5, rem_cst)
 	li	a3,64
-	vclmulh.vx	v2,v2,a5
+	vclmulh.vx	v8,v8,a5
 	sub	a5,a3,a4
 	vsrl.vx	v1,v1,a5
-	vxor.vv	v1,v1,v2
+	vxor.vv	v1,v1,v8
 	vmv.x.s	a0,v1
 	sext.w	a0,a0
 	ret
@@ -219,18 +219,18 @@ rv_crc32_le_vector_clmul_fold_asm:
 	ret
 .Lprolog_align:
 	vsetvli	zero,a4,e8,V_LMUL,ta,ma
-	vle8.v	v2,0(a1)
+	vle8.v	v8,0(a1)
 	// REV_CRC32_BE_INV_EXT = 0xb4e5b025f7011641
 	LDRVA(a5, REV_CRC32_BE_INV_EXT)
 	li	a3,8
 	sub	a3,a3,a4
 	vsetivli	zero,1,e64,V_LMUL,ta,ma
 	slli	a3,a3,3
-	vsll.vx	v2,v2,a3
-	vclmul.vx	v2,v2,a5
+	vsll.vx	v8,v8,a3
+	vclmul.vx	v8,v8,a5
 	// rem_cst = 0x1db710641
 	LDRVA(a5, rem_cst)
-	vclmulh.vx	v2,v2,a5
+	vclmulh.vx	v8,v8,a5
 	sub	a2,a2,a4
 	add	a1,a1,a4
 	vsetivli	zero,NUM_E64,e64,V_LMUL,ta,ma
