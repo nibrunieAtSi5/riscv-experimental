@@ -7,7 +7,7 @@
 	.align	1
 
 #ifndef LMUL
-#define LMUL 2
+#define LMUL 8
 #endif
 
 #if LMUL == 1
@@ -69,7 +69,7 @@ rv_crc32_le_vector_clmul_fold_asm:
 	//
 	// Invariants:
 	// TBD
-	li	a5,31
+	li	a5,NUM_BYTES - 1
 	bleu	a2,a5,.Linit_acc
 	andi	a4,a1,7
 	bne	a4,zero,.Lprolog_align
@@ -136,7 +136,7 @@ rv_crc32_le_vector_clmul_fold_asm:
 .Lreduce_acc:
 	vsetivli	zero,1,e64,m1,ta,ma
 	sub	a2,a2,t3
-	li	a5,31
+	li	a5,NUM_BYTES - 1
 	vmv1r.v	v1,v8
 	bleu	a2,a5,.Lsetup_8_byte
 	vsetivli	zero,NUM_E64,e64,V_LMUL,ta,ma
@@ -177,6 +177,7 @@ rv_crc32_le_vector_clmul_fold_asm:
 	addi	a6,a5,-1
 	add	a0,a1,a0
 	mv	a5,a1
+	vsetivli	zero,1,e64,m1,ta,ma
 .Lloop_8_byte:
 	vle64.v	v8,0(a5)
 	addi	a5,a5,8
